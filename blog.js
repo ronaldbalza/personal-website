@@ -12,18 +12,26 @@
   const search = document.getElementById('blogSearch');
   const empty  = document.getElementById('postsEmpty');
 
-  // Chip counts
+  // Chip counts — hide topics with no published posts yet
   chips.forEach(chip => {
     const cat = chip.dataset.filter;
     const n = cat === 'all' ? cards.length : cards.filter(c => c.dataset.category === cat).length;
     const badge = chip.querySelector('.chip-count');
     if (badge) badge.textContent = n;
+    if (cat !== 'all' && n === 0) chip.hidden = true;
   });
+
+  // With fewer than two populated topics there is nothing to filter between
+  const populated = chips.filter(c => c.dataset.filter !== 'all' && !c.hidden).length;
+  const filterRow = document.querySelector('.blog-filters');
+  if (filterRow && populated < 2) filterRow.hidden = true;
 
   // Deep link: /blog/?topic=powerbi
   const params = new URLSearchParams(location.search);
   let active = params.get('topic') || 'all';
   if (!chips.some(c => c.dataset.filter === active)) active = 'all';
+  // ?topic= for a topic with no posts yet (e.g. an article breadcrumb) falls back to All
+  if (filterRow?.hidden || chips.find(c => c.dataset.filter === active)?.hidden) active = 'all';
 
   function apply(fromUser = true) {
     const q = (search?.value || '').trim().toLowerCase();

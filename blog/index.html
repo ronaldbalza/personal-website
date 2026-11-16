@@ -87,7 +87,8 @@
       <!--
         HOW TO ADD A POST
         1. Copy blog/post-template.html to blog/<your-slug>.html (same folder as this file) and write the article.
-        2. Add a card below. Published cards are <a> links; planned ones use class "upcoming".
+        2. Add a card at the top of #postsGrid (copy the published one). Planned
+           topics are kept in the hidden <template id="upcoming-posts"> below.
         3. data-category must be one of: powerbi, engineering, cloud, crm, walkthrough
            (and the matching cat-* class sets the colour).
         4. Newest first. Move "featured" to whichever post you want highlighted.
@@ -120,7 +121,16 @@
             </a>
           </article>
 
-          <!-- ── Coming soon (planned topics) ──────────────────────── -->
+        </div>
+
+        <!--
+          ── Planned topics (hidden) ───────────────────────────────────
+          Nothing inside <template> is rendered, counted or indexed.
+          When an article is ready: move its card up into #postsGrid, remove
+          the "upcoming" class and the soon-badge, and wrap the cover + body
+          in <a href="your-slug.html" class="post-card-link"> like the post above.
+        -->
+        <template id="upcoming-posts">
           <article class="post-card upcoming cat-engineering reveal" data-category="engineering">
             <div class="post-cover">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="6" height="6" rx="1"/><rect x="16" y="15" width="6" height="6" rx="1"/><path d="M5 9v4a2 2 0 0 0 2 2h9"/><polyline points="13 12 16 15 13 18"/></svg>
@@ -204,8 +214,7 @@
               <div class="post-tags"><span>Portfolio</span><span>Career</span><span>Publish to Web</span></div>
             </div>
           </article>
-
-        </div>
+        </template>
 
         <p class="posts-empty" id="postsEmpty" hidden>
           No articles match that search yet. <button type="button" id="resetFilters">Clear filters</button>
