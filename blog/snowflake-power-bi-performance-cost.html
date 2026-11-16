@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="How to connect Power BI to Snowflake efficiently: Import vs DirectQuery vs composite models, a dedicated BI warehouse with auto-suspend and resource monitors, reporting views, roles, and monitoring Power BI query cost." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Connecting Power BI to Snowflake: Storage Modes, Warehouse Sizing and Cost Control" />
+    <meta property="og:description" content="Import vs DirectQuery, a dedicated BI warehouse, resource monitors and query history: Power BI on Snowflake without surprise bills." />
+    <meta property="article:published_time" content="2026-09-03" />
+    <title>Connecting Power BI to Snowflake: Storage Modes, Warehouse Sizing and Cost Control — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-cloud">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=cloud" class="current">Fabric &amp; Snowflake</a>
+          </div>
+          <h1>Connecting Power BI to Snowflake: Storage Modes, Warehouse Sizing and Cost Control</h1>
+          <p class="post-dek">
+            Power BI and Snowflake work well together, but the defaults can produce slow reports and surprising credit usage. These are the decisions that matter: storage mode, warehouse setup, the reporting layer and monitoring.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2026-09-03">Sep 3, 2026</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-cloud" id="post-content">
+            <p>
+              Every Power BI query against Snowflake runs on a virtual warehouse, and a running warehouse consumes credits.
+              That simple fact drives most of the design decisions below. A model refreshed twice a day costs very little;
+              a DirectQuery report opened by two hundred people every morning, each page firing a dozen queries, is a different
+              story.
+            </p>
+
+            <h2 data-toc="Choosing a storage mode">Choose the storage mode deliberately</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Mode</th><th>Snowflake load</th><th>Freshness</th><th>Use when</th></tr></thead>
+                <tbody>
+                  <tr><td>Import</td><td>Only during refresh</td><td>As of last refresh</td><td>The default. Most reporting is fine with hourly or daily data.</td></tr>
+                  <tr><td>DirectQuery</td><td>Every visual, every interaction</td><td>Live</td><td>Data must be current to the minute, or is too large to import.</td></tr>
+                  <tr><td>Composite</td><td>Only for DirectQuery tables</td><td>Mixed</td><td>Large detail fact in DirectQuery; dimensions and aggregates imported.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              In a composite model, set dimension tables to <strong>Dual</strong> storage mode: they're imported, but can also
+              act as DirectQuery tables when joined to a DirectQuery fact, which avoids slow cross-source joins. Add an
+              imported <strong>aggregation table</strong> (for example, sales by day, product and region) and configure
+              <em>Manage aggregations</em>, and most visuals are answered from memory, with only drill-to-detail reaching
+              Snowflake.
+            </p>
+
+            <h2 data-toc="A dedicated BI warehouse">Give Power BI its own warehouse</h2>
+            <p>
+              Don't let Power BI share a warehouse with ETL. A dedicated warehouse makes BI costs visible, prevents a heavy
+              transformation job from slowing reports, and lets you tune the settings for short, bursty queries:
+            </p>
+
+<pre data-lang="SQL"><code>CREATE WAREHOUSE IF NOT EXISTS bi_wh
+  WAREHOUSE_SIZE      = 'XSMALL'
+  AUTO_SUSPEND        = 60          -- seconds idle before suspending
+  AUTO_RESUME         = TRUE
+  INITIALLY_SUSPENDED = TRUE
+  COMMENT = 'Power BI refresh and DirectQuery';
+
+-- Cap monthly spend: notify at 80%, suspend at 100%
+CREATE RESOURCE MONITOR bi_monitor
+  WITH CREDIT_QUOTA = 100
+       FREQUENCY = MONTHLY
+       START_TIMESTAMP = IMMEDIATELY
+  TRIGGERS ON 80 PERCENT DO NOTIFY
+           ON 100 PERCENT DO SUSPEND;
+
+ALTER WAREHOUSE bi_wh SET RESOURCE_MONITOR = bi_monitor;</code></pre>
+            <ul>
+              <li>
+                <strong>Auto-suspend.</strong> Billing is per second with a 60-second minimum each time a warehouse resumes.
+                A short auto-suspend suits refresh workloads; for DirectQuery, a slightly longer value can avoid constant
+                suspend/resume cycles and keeps the warehouse's local cache warm.
+              </li>
+              <li>
+                <strong>Size vs concurrency.</strong> A bigger warehouse makes individual heavy queries faster. Many users
+                running small queries at once is a concurrency problem, which multi-cluster warehouses (Enterprise edition and
+                above) address by adding clusters with <code>MAX_CLUSTER_COUNT</code>.
+              </li>
+              <li>
+                <strong>A <code>SUSPEND</code> trigger stops queries</strong> once the quota is used. That protects the budget but
+                also stops reports; agree on it with the business, or use <code>NOTIFY</code> only.
+              </li>
+            </ul>
+
+            <h2 data-toc="Role and reporting layer">Use a reporting role and a reporting schema</h2>
+            <p>
+              Power BI should connect with a role that can read only the reporting layer, using only the BI warehouse:
+            </p>
+
+<pre data-lang="SQL"><code>CREATE ROLE IF NOT EXISTS powerbi_reader;
+
+GRANT USAGE ON WAREHOUSE bi_wh                   TO ROLE powerbi_reader;
+GRANT USAGE ON DATABASE analytics                TO ROLE powerbi_reader;
+GRANT USAGE ON SCHEMA analytics.reporting        TO ROLE powerbi_reader;
+GRANT SELECT ON ALL VIEWS IN SCHEMA analytics.reporting    TO ROLE powerbi_reader;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA analytics.reporting TO ROLE powerbi_reader;</code></pre>
+            <p>
+              The <code>reporting</code> schema contains star-schema views (or tables) with business-friendly column names and
+              the right data types. Power BI then imports clean tables with no transformation in Power Query, and every
+              report built on the warehouse uses the same definitions.
+            </p>
+            <div class="callout">
+              <span class="callout-icon" aria-hidden="true">💡</span>
+              <p>
+                <strong>Watch the data types.</strong> Snowflake <code>NUMBER</code> columns with a scale (e.g.
+                <code>NUMBER(38,6)</code>) import as decimals; IDs stored as <code>NUMBER(38,0)</code> import as whole numbers.
+                Cast deliberately in the view, and avoid importing high-precision timestamps where a date will do: fewer unique
+                values compress far better in the VertiPaq engine.
+              </p>
+            </div>
+
+            <h2 data-toc="Connecting from Power BI">Connecting from Power BI</h2>
+            <p>
+              The Snowflake connector takes the account URL and warehouse, and optionally a role. Setting the role explicitly
+              avoids depending on the user's default role:
+            </p>
+
+<pre data-lang="Power Query M"><code>let
+    Source    = Snowflake.Databases(
+                    "myorg-myaccount.snowflakecomputing.com",
+                    "BI_WH",
+                    [Role = "POWERBI_READER"]
+                ),
+    Analytics = Source{[Name = "ANALYTICS", Kind = "Database"]}[Data],
+    Reporting = Analytics{[Name = "REPORTING", Kind = "Schema"]}[Data],
+    FactSales = Reporting{[Name = "FACT_SALES", Kind = "View"]}[Data]
+in
+    FactSales</code></pre>
+            <p>
+              For scheduled refresh in the service, the semantic model needs credentials for a dedicated service user rather
+              than a person's account (Snowflake is phasing out password-only sign-in, so check which authentication methods
+              your connector and gateway versions support) and, if Snowflake is reachable only over a private network, a
+              gateway. For DirectQuery, <strong>Microsoft Entra ID single sign-on</strong> passes each report viewer's identity
+              to Snowflake, so Snowflake's own row access policies and roles apply per user. It requires a Snowflake security
+              integration for Entra ID and enabling the setting in the Power BI admin portal.
+            </p>
+
+            <h2 data-toc="Monitoring">Monitor what Power BI actually costs</h2>
+            <p>
+              Credit usage per warehouse is in <code>ACCOUNT_USAGE</code>. Run this weekly, or put it in its own small report:
+            </p>
+
+<pre data-lang="SQL"><code>-- Credits used by the BI warehouse per day
+SELECT DATE_TRUNC('day', start_time) AS usage_day,
+       SUM(credits_used)             AS credits
+FROM   snowflake.account_usage.warehouse_metering_history
+WHERE  warehouse_name = 'BI_WH'
+  AND  start_time &gt;= DATEADD('day', -30, CURRENT_TIMESTAMP())
+GROUP  BY 1
+ORDER  BY 1;
+
+-- Slowest Power BI queries in the last week
+SELECT query_text,
+       total_elapsed_time / 1000 AS seconds,
+       bytes_scanned,
+       user_name
+FROM   snowflake.account_usage.query_history
+WHERE  warehouse_name = 'BI_WH'
+  AND  start_time &gt;= DATEADD('day', -7, CURRENT_TIMESTAMP())
+ORDER  BY total_elapsed_time DESC
+LIMIT  20;</code></pre>
+            <p>
+              (<code>ACCOUNT_USAGE</code> views have some latency, typically up to a few hours, so they're for trends rather than
+              live monitoring.) The slow-query list usually points straight at the fix: a missing filter, a view doing heavy work
+              at query time that should be materialised, or a large table that would benefit from a clustering key on the
+              column reports filter by most.
+            </p>
+
+            <h2 data-toc="Caching">Let the caches help</h2>
+            <p>
+              Snowflake's <strong>result cache</strong> returns the result of an identical query for 24 hours without using the
+              warehouse at all, as long as the underlying data hasn't changed. Import refreshes rarely benefit, but DirectQuery
+              reports often do: many users opening the same landing page generate identical queries. Avoid non-deterministic
+              functions such as <code>CURRENT_TIMESTAMP()</code> in reporting views, because they prevent result reuse.
+            </p>
+
+            <h2>Wrapping up</h2>
+            <p>
+              Default to Import, use composite models with aggregations when you need DirectQuery, give Power BI its own small
+              warehouse with a resource monitor, and connect through a read-only role to a curated reporting schema. Then check
+              warehouse metering regularly. Snowflake makes the cost of every query visible, which makes it straightforward
+              to keep under control.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-cloud">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>Snowflake</span><span>Power BI</span><span>Performance</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

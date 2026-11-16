@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Practical layout, colour, chart-choice and Power BI implementation rules for executive dashboards, including theme JSON, dynamic titles with DAX and accessibility checks." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Data Visualization Rules for Executive Dashboards in Power BI" />
+    <meta property="og:description" content="Layout, colour and chart-choice habits that make a Power BI dashboard readable in five seconds." />
+    <meta property="article:published_time" content="2026-02-10" />
+    <title>Data Visualization Rules for Executive Dashboards in Power BI — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-powerbi">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=powerbi" class="current">Power BI &amp; DAX</a>
+          </div>
+          <h1>Data Visualization Rules for Executive Dashboards in Power BI</h1>
+          <p class="post-dek">
+            An executive gives a dashboard a few seconds before deciding whether it's useful. These are the layout, colour and chart habits that make those seconds count, and how to implement them in Power BI.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2026-02-10">Feb 10, 2026</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-powerbi" id="post-content">
+            <p>
+              Most dashboards that fail with senior audiences don't fail because the numbers are wrong. They
+              fail because the reader can't find the answer fast enough. An analyst will happily explore a page
+              with twelve visuals and four slicers; an executive opens it between meetings, looks for one or two
+              numbers, and closes it.
+            </p>
+            <p>
+              These are the rules I apply when the audience is leadership. None of them are new, but they're
+              easy to forget once you're deep in DAX.
+            </p>
+
+            <h2 data-toc="1. One question per page">1. Start from the question, not the data</h2>
+            <p>
+              Before opening Power BI Desktop, write down the two or three questions the page has to answer,
+              for example <em>"Are we on track against budget this quarter?"</em> and <em>"Which region is
+              behind?"</em> Every visual on the page should answer one of those questions. If it doesn't, it
+              belongs on a detail page reached through drillthrough, not on the summary.
+            </p>
+
+            <h2 data-toc="2. Layout follows reading order">2. Put the answer where the eye lands first</h2>
+            <p>
+              People scan a page from the top left. Use that:
+            </p>
+            <figure class="flow">
+              <ol>
+                <li><strong>Top row</strong><span>3–5 KPI cards: the headline numbers with comparison</span></li>
+                <li><strong>Middle</strong><span>Trend: how did we get here?</span></li>
+                <li><strong>Bottom</strong><span>Breakdown: where is it coming from?</span></li>
+              </ol>
+              <figcaption>Summary → trend → breakdown, top to bottom.</figcaption>
+            </figure>
+            <p>
+              Keep slicers to the ones leadership actually uses (usually period and business unit) and put them
+              in a consistent place on every page. Hidden filters are worse than visible ones: if a page is
+              filtered, say so in the subtitle.
+            </p>
+
+            <h2 data-toc="3. Every number needs context">3. Never show a number without context</h2>
+            <p>
+              "Revenue: $4.2M" doesn't tell anyone whether to worry. A KPI needs a comparison: target, prior
+              year or prior period. The built-in KPI visual and the newer card visual both support a reference
+              value; in either case, the comparison measure should be in the model, not calculated by hand.
+            </p>
+            <p>
+              I also make the visual title do some of the work. A title that states the finding is read far more
+              often than an axis label. Power BI lets you drive a title from a measure (Format → Title →
+              <em>fx</em> → Field value):
+            </p>
+
+<pre data-lang="DAX"><code>Revenue Title =
+VAR _yoy = [Sales YoY %]
+RETURN
+    "Revenue is "
+        &amp; FORMAT ( ABS ( _yoy ), "0.0%" )
+        &amp; IF ( _yoy &gt;= 0, " ahead of", " behind" )
+        &amp; " last year"</code></pre>
+            <p>
+              The same technique works for subtitles that show the active filter context, e.g. using
+              <code>SELECTEDVALUE ( 'Region'[Region], "All regions" )</code>.
+            </p>
+
+            <h2 data-toc="4. Choose the simplest chart">4. Choose the simplest chart that answers the question</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Question</th><th>Use</th><th>Avoid</th></tr></thead>
+                <tbody>
+                  <tr><td>How is it trending?</td><td>Line chart (with target or prior year as a second line)</td><td>Column charts with 24+ bars</td></tr>
+                  <tr><td>Which is biggest?</td><td>Sorted horizontal bar chart</td><td>Pie or donut with more than 3–4 slices</td></tr>
+                  <tr><td>Are we on target?</td><td>Card or KPI with variance, bullet-style bar</td><td>Gauges that take space for one number</td></tr>
+                  <tr><td>What drove the change?</td><td>Waterfall chart</td><td>Stacked columns that make segments hard to compare</td></tr>
+                  <tr><td>Exact values needed</td><td>Table or matrix with conditional formatting</td><td>Data labels on every point of a busy chart</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Two specific habits: <strong>sort bar charts by value</strong>, not alphabetically, and
+              <strong>start bar axes at zero</strong>. A bar's length is the value; truncating the axis makes small
+              differences look dramatic. (Line charts can use a non-zero axis, because the reader compares slope,
+              not length.)
+            </p>
+
+            <h2 data-toc="5. Colour has a job">5. Use colour to mean something</h2>
+            <p>
+              The default Power BI palette gives every series a different colour, which is fine for exploration
+              and noisy for executives. A better default: neutral greys for everything, one accent colour for what
+              matters, and red/green reserved strictly for good/bad. Set this once in a report theme so every
+              visual inherits it:
+            </p>
+
+<pre data-lang="JSON"><code>{
+  "name": "Executive",
+  "dataColors": ["#1F6FB2", "#9AA5B1", "#C3CAD2", "#5B6770", "#E2E6EA"],
+  "good": "#1A7F37",
+  "neutral": "#9AA5B1",
+  "bad": "#C62828",
+  "background": "#FFFFFF",
+  "foreground": "#252423",
+  "tableAccent": "#1F6FB2"
+}</code></pre>
+            <p>
+              Import it from View → Themes → Browse for themes. The <code>good</code>, <code>neutral</code> and
+              <code>bad</code> colours are used by visuals such as the KPI visual and waterfall, and the same hex
+              values can be reused in conditional-formatting rules so variance colours are consistent across pages.
+            </p>
+
+            <div class="callout warn">
+              <span class="callout-icon" aria-hidden="true">⚠️</span>
+              <p>
+                <strong>Don't rely on colour alone.</strong> Red/green is the most common colour-vision deficiency
+                pairing. Add a sign, an arrow icon or a "+/−" in the number format (for example
+                <code>"+0.0%;-0.0%"</code>) so the meaning survives without the colour.
+              </p>
+            </div>
+
+            <h2 data-toc="6. Less is faster">6. Fewer visuals load faster</h2>
+            <p>
+              This is a usability rule and a performance rule. Each visual on a page generates at least one query
+              against the semantic model, and on DirectQuery models each of those becomes source queries. A page
+              with 25 visuals is slower to render and harder to read. If a page needs that many, it's usually two
+              pages. Performance Analyzer (Optimize ribbon → Performance analyzer) shows how long each visual takes,
+              which is a useful argument when someone asks for "just one more chart".
+            </p>
+
+            <h2 data-toc="7. Accessibility">7. Make it accessible by default</h2>
+            <ul>
+              <li><strong>Contrast:</strong> aim for at least 4.5:1 between text and background (the WCAG AA level for normal text).</li>
+              <li><strong>Alt text:</strong> every visual has an alt text property under General; screen readers use it.</li>
+              <li><strong>Tab order:</strong> set it in the Selection pane so keyboard users move through visuals in reading order, and hide decorative shapes from tab order.</li>
+              <li><strong>Mobile layout:</strong> if leaders open reports on their phones, build the mobile layout explicitly (View → Mobile layout) with the KPI cards first.</li>
+            </ul>
+
+            <h2>Wrapping up</h2>
+            <p>
+              A good executive dashboard is mostly subtraction: one question per page, KPIs with context, the
+              simplest chart for each question and colour that only highlights what matters. Put the decisions into
+              a theme and a set of reusable measures, and every new report starts from a design that already works.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-powerbi">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>Power BI</span><span>Data Visualization</span><span>UX</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

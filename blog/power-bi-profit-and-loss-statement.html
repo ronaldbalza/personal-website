@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A step-by-step pattern for a financial P&L in Power BI: a report-line dimension, account mapping, sign conventions, subtotals with a single DAX measure, margin percentages and balance sheet balances." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Building a Profit & Loss Statement in Power BI" />
+    <meta property="og:description" content="A report-line dimension, account mapping and one DAX measure for detail lines, subtotals and margins." />
+    <meta property="article:published_time" content="2024-09-10" />
+    <title>Building a Profit & Loss Statement in Power BI — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-walkthrough">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=walkthrough" class="current">Walkthrough</a>
+          </div>
+          <h1>Building a Profit & Loss Statement in Power BI</h1>
+          <p class="post-dek">
+            Finance teams want their P&L to look exactly like the one in the board pack: subtotals in the right places, revenue positive, costs in brackets. A matrix can do it, with the right model behind it.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2024-09-10">Sep 10, 2024</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-walkthrough" id="post-content">
+            <p>
+              Financial statements are one of the most requested reports in Power BI, and one of the easiest to get wrong. The
+              general ledger gives you thousands of transactions against hundreds of accounts. The finance team wants twenty
+              lines: Revenue, Cost of Sales, <strong>Gross Profit</strong>, Operating Expenses, <strong>EBITDA</strong> and so
+              on, with subtotals that aren't stored anywhere in the source.
+            </p>
+            <p>
+              The approach below keeps the layout in data (so finance can change it without touching DAX) and uses one measure
+              for every line.
+            </p>
+
+            <figure class="flow">
+              <ol>
+                <li><strong>GL transactions</strong><span>Date, account, amount (debit +, credit −)</span></li>
+                <li><strong>Account</strong><span>Chart of accounts, mapped to a report line</span></li>
+                <li><strong>P&amp;L Line</strong><span>Layout: order, type, subtotal rule</span></li>
+                <li><strong>One measure</strong><span>Detail, subtotal or ratio per line</span></li>
+              </ol>
+            </figure>
+
+            <h2 data-toc="The model">Step 1 — The model</h2>
+            <p>Three tables, plus the usual date table:</p>
+            <ul>
+              <li><code>GL</code>: one row per journal line, with <code>Date</code>, <code>AccountCode</code> and <code>Amount</code>. Debits positive, credits negative, a common export convention (if your source differs, adjust the sign in Step 2).</li>
+              <li><code>Account</code>: the chart of accounts, with a <code>LineID</code> column mapping each account to a P&amp;L detail line. Balance sheet accounts map to their own lines (or none, for a P&amp;L-only model).</li>
+              <li><code>PL Line</code>: the layout of the statement.</li>
+            </ul>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>LineID</th><th>Line</th><th>SortOrder</th><th>LineType</th></tr></thead>
+                <tbody>
+                  <tr><td>10</td><td>Revenue</td><td>10</td><td>Detail</td></tr>
+                  <tr><td>20</td><td>Cost of Sales</td><td>20</td><td>Detail</td></tr>
+                  <tr><td>30</td><td>Gross Profit</td><td>30</td><td>Subtotal</td></tr>
+                  <tr><td>35</td><td>Gross Margin %</td><td>35</td><td>Ratio</td></tr>
+                  <tr><td>40</td><td>Employee Costs</td><td>40</td><td>Detail</td></tr>
+                  <tr><td>50</td><td>Occupancy</td><td>50</td><td>Detail</td></tr>
+                  <tr><td>60</td><td>Other Operating Expenses</td><td>60</td><td>Detail</td></tr>
+                  <tr><td>70</td><td>EBITDA</td><td>70</td><td>Subtotal</td></tr>
+                  <tr><td>80</td><td>Depreciation &amp; Amortisation</td><td>80</td><td>Detail</td></tr>
+                  <tr><td>90</td><td>EBIT</td><td>90</td><td>Subtotal</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Relationships: <code>PL Line[LineID]</code> → <code>Account[LineID]</code> → <code>GL[AccountCode]</code>, all
+              one-to-many and single direction, plus <code>Date</code> → <code>GL</code>. Set <code>PL Line[Line]</code> to
+              <em>sort by</em> <code>SortOrder</code> so the matrix shows lines in statement order.
+            </p>
+
+            <h2 data-toc="Sign convention">Step 2 — Get the sign convention right once</h2>
+            <p>
+              In the ledger, revenue is a credit (negative) and expenses are debits (positive). On a P&amp;L, people expect revenue
+              positive and costs negative so that adding lines down the page gives profit. Flipping the sign of everything does
+              exactly that:
+            </p>
+
+<pre data-lang="DAX"><code>GL Amount = SUM ( GL[Amount] )
+
+-- Revenue becomes positive, costs negative: lines now add up to profit
+PL Amount = - [GL Amount]</code></pre>
+            <p>
+              Because every line is now signed so that it adds up, a subtotal is simply <em>the sum of all detail lines above
+              it</em>. Gross Profit is Revenue + Cost of Sales; EBITDA is everything above line 70, and so on.
+            </p>
+
+            <h2 data-toc="One measure for every line">Step 3 — One measure for every line</h2>
+
+<pre data-lang="DAX"><code>P&amp;L Value =
+VAR _type = SELECTEDVALUE ( 'PL Line'[LineType] )
+VAR _sort = SELECTEDVALUE ( 'PL Line'[SortOrder] )
+VAR _subtotal =
+    CALCULATE (
+        [PL Amount],
+        REMOVEFILTERS ( 'PL Line' ),
+        'PL Line'[SortOrder] &lt;= _sort,
+        'PL Line'[LineType] = "Detail"
+    )
+VAR _revenue =
+    CALCULATE (
+        [PL Amount],
+        REMOVEFILTERS ( 'PL Line' ),
+        'PL Line'[Line] = "Revenue"
+    )
+RETURN
+    SWITCH (
+        _type,
+        "Detail",   [PL Amount],
+        "Subtotal", _subtotal,
+        "Ratio",    DIVIDE ( _subtotal, _revenue )
+    )</code></pre>
+            <p>How it works:</p>
+            <ul>
+              <li>On a <strong>detail</strong> line, the filter on <code>PL Line</code> flows through <code>Account</code> to <code>GL</code>, giving that line's amount.</li>
+              <li>On a <strong>subtotal</strong> line, no accounts map to it, so we remove the line filter and sum every detail line with a lower sort order.</li>
+              <li>The <strong>ratio</strong> line (Gross Margin %) divides the running subtotal above it by revenue.</li>
+              <li>On the matrix grand total, no single line is selected, <code>_type</code> is blank and the measure returns blank, which is correct: adding up every line of a P&amp;L, subtotals included, is meaningless. Turn off row totals on the matrix.</li>
+            </ul>
+            <div class="callout">
+              <span class="callout-icon" aria-hidden="true">💡</span>
+              <p>
+                <strong>Formatting the ratio line.</strong> One measure returns both currency and percentages. Use a dynamic
+                format string on the measure (Measure tools → Format → Dynamic) such as
+                <code>IF ( SELECTEDVALUE ( 'PL Line'[LineType] ) = "Ratio", "0.0%", "#,##0;(#,##0)" )</code> so costs show in
+                brackets and margin lines as percentages.
+              </p>
+            </div>
+
+            <h2 data-toc="Comparisons">Step 4 — Budget and prior-year columns</h2>
+            <p>
+              Because <code>P&amp;L Value</code> only depends on <code>[PL Amount]</code>, comparisons are a matter of swapping that
+              base. With a <code>Budget</code> fact mapped to the same accounts, write <code>PL Budget = - SUM ( Budget[Amount] )</code>,
+              copy the pattern as <code>P&amp;L Budget Value</code>, and add variance as the difference. For prior year, wrap the base
+              in <code>SAMEPERIODLASTYEAR</code>, or use a calculation group so the same line logic serves actual, budget and prior
+              year without duplication.
+            </p>
+
+            <h2 data-toc="Balance sheet">What changes for a balance sheet</h2>
+            <p>
+              A P&amp;L shows activity <em>during</em> a period. A balance sheet shows a position <em>at</em> a point in time, so each
+              account's balance is the sum of all transactions up to the end of the selected period:
+            </p>
+
+<pre data-lang="DAX"><code>Balance =
+VAR _end = MAX ( 'Date'[Date] )
+RETURN
+    CALCULATE (
+        [GL Amount],
+        REMOVEFILTERS ( 'Date' ),
+        'Date'[Date] &lt;= _end
+    )</code></pre>
+            <p>
+              This is a <strong>semi-additive</strong> measure: it adds up across accounts, but not across time. Selecting the year
+              2024 returns the balance at 31 December 2024, not the sum of twelve month-end balances. If the ledger is large,
+              consider an opening-balance table so the calculation doesn't scan every transaction since the company began. Retained
+              earnings also needs care: current-year profit has to be rolled in so the balance sheet balances.
+            </p>
+
+            <h2 data-toc="Reconcile">Step 5 — Reconcile before anyone sees it</h2>
+            <ol>
+              <li>Check that every account with activity maps to a line. A card showing <code>[GL Amount]</code> for accounts with a blank <code>LineID</code> should always read zero.</li>
+              <li>Match each subtotal to the accounting system's own P&amp;L for at least two closed periods.</li>
+              <li>Check that the trial balance nets to zero for every period; if it doesn't, the extract is incomplete.</li>
+            </ol>
+
+            <h2>Wrapping up</h2>
+            <p>
+              The pattern is a layout table, a consistent sign convention and one measure that knows whether it's on a detail line,
+              a subtotal or a ratio. Finance can reorder lines, add a subtotal or remap an account by editing data, and the report
+              follows without DAX changes. That's what keeps a financial report maintainable after month-end close number twelve.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-walkthrough">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>Power BI</span><span>Financial Reporting</span><span>DAX</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

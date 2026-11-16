@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A practical comparison of Microsoft Fabric and Snowflake for Power BI reporting: storage, compute and billing models, Direct Lake versus Import and DirectQuery, and three architectures that combine them." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Microsoft Fabric and Snowflake: Where Each Fits in a Modern BI Stack" />
+    <meta property="og:description" content="Lakehouses, OneLake shortcuts and Direct Lake versus a Snowflake warehouse: choosing an architecture for Power BI." />
+    <meta property="article:published_time" content="2026-01-27" />
+    <title>Microsoft Fabric and Snowflake: Where Each Fits in a Modern BI Stack — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-cloud">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=cloud" class="current">Fabric &amp; Snowflake</a>
+          </div>
+          <h1>Microsoft Fabric and Snowflake: Where Each Fits in a Modern BI Stack</h1>
+          <p class="post-dek">
+            Fabric and Snowflake are often pitched as rivals, but in a lot of Power BI estates they end up side by side. Here's how they differ where it matters for reporting, and the architectures that combine them sensibly.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2026-01-27">Jan 27, 2026</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-cloud" id="post-content">
+            <p>
+              "Should we use Fabric or Snowflake?" is usually the wrong first question. Both can store data,
+              run SQL and feed Power BI. The more useful questions are: where does the data already live,
+              who is going to build and maintain the transformations, and how do the reports need to query it?
+              Those answers usually settle the choice, and sometimes the answer is both.
+            </p>
+
+            <h2 data-toc="The platforms in one paragraph each">The two platforms in one paragraph each</h2>
+            <p>
+              <strong>Snowflake</strong> is a cloud data platform built around a SQL warehouse. Storage and
+              compute are separate: data sits in Snowflake-managed storage, and you run queries on
+              <em>virtual warehouses</em> that you size, suspend and resume independently. You pay for storage
+              plus credits consumed while warehouses run (billed per second after the first 60 seconds each
+              time a warehouse starts). It runs on AWS, Azure or GCP.
+            </p>
+            <p>
+              <strong>Microsoft Fabric</strong> is a SaaS analytics platform that puts data engineering,
+              warehousing, real-time analytics and Power BI in one product. All of it shares a single data lake,
+              <strong>OneLake</strong>, where tables are stored as Delta Parquet. Compute is bought as a
+              <strong>capacity</strong> (an F SKU) that every workload in the attached workspaces draws on, measured
+              in capacity units (CUs).
+            </p>
+
+            <h2 data-toc="Differences that matter for BI">The differences that matter for BI</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th></th><th>Snowflake</th><th>Microsoft Fabric</th></tr></thead>
+                <tbody>
+                  <tr><td>Storage format</td><td>Proprietary managed storage (plus Apache Iceberg tables)</td><td>Open Delta Parquet in OneLake</td></tr>
+                  <tr><td>Compute model</td><td>Per-warehouse, per-second credits; scale each workload independently</td><td>Shared capacity; workloads compete for the same CUs, with smoothing and throttling</td></tr>
+                  <tr><td>Primary interface</td><td>SQL (plus Snowpark for Python, Java, Scala)</td><td>Spark notebooks, T-SQL warehouse, Dataflows Gen2, pipelines</td></tr>
+                  <tr><td>Power BI connection</td><td>Import or DirectQuery through the Snowflake connector</td><td>Direct Lake, as well as Import and DirectQuery</td></tr>
+                  <tr><td>Governance</td><td>Roles, masking and row access policies in the database</td><td>Workspace roles, OneLake security, Microsoft Purview integration</td></tr>
+                  <tr><td>Best fit</td><td>SQL-centric teams, multi-cloud, heavy concurrent SQL workloads</td><td>Microsoft-centric teams that want engineering and BI in one place</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h2 data-toc="Direct Lake">Direct Lake is the real differentiator</h2>
+            <p>
+              For a Power BI developer, the most important Fabric feature is <strong>Direct Lake</strong>. With
+              Import mode, a refresh copies data into the semantic model. With DirectQuery, every visual
+              interaction sends a query to the source. Direct Lake sits between them: the VertiPaq engine loads
+              Delta Parquet column data straight from OneLake into memory when it's needed, with no import
+              refresh. Performance is close to Import, and data is as fresh as the last write to the Delta table.
+            </p>
+            <p>It comes with conditions worth knowing before you design around it:</p>
+            <ul>
+              <li>
+                <strong>Guardrails per capacity SKU.</strong> Each F SKU has limits on rows per table, model size
+                in memory and Parquet files per table. Exceed them and a Direct Lake model on the SQL analytics
+                endpoint falls back to DirectQuery, which is slower.
+              </li>
+              <li>
+                <strong>Tables, not views.</strong> Direct Lake reads Delta tables. Views in the SQL analytics
+                endpoint cause DirectQuery fallback, so business logic needs to be materialised as tables.
+              </li>
+              <li>
+                <strong>Table health matters.</strong> Many small Parquet files hurt load times. Regular
+                <code>OPTIMIZE</code> (with V-Order, which Fabric uses to speed up VertiPaq reads) is part of
+                running Direct Lake well.
+              </li>
+            </ul>
+            <p>
+              Snowflake has no Direct Lake equivalent, because Power BI can't read Snowflake's storage directly.
+              Reports over Snowflake use Import (fast, but needs scheduled refresh) or DirectQuery (live, but each
+              visual runs warehouse queries, which costs credits and adds latency).
+            </p>
+
+            <h2 data-toc="Three architectures">Three architectures that work</h2>
+
+            <h3>1. Snowflake as the warehouse, Power BI on top</h3>
+            <figure class="flow">
+              <ol>
+                <li><strong>Sources</strong><span>CRM, ERP, files</span></li>
+                <li><strong>Snowflake</strong><span>Raw → curated → reporting views</span></li>
+                <li><strong>Semantic model</strong><span>Import, or composite with DirectQuery</span></li>
+                <li><strong>Power BI reports</strong><span>Published to a Pro or Premium/Fabric workspace</span></li>
+              </ol>
+            </figure>
+            <p>
+              The most common setup where Snowflake is already the system of record. All transformation lives
+              in Snowflake SQL; Power BI imports star-schema views. It's simple and well understood. The cost to
+              watch is refresh and DirectQuery traffic waking warehouses: give Power BI its own warehouse with a
+              short auto-suspend so that usage is visible and capped.
+            </p>
+
+            <h3>2. Fabric end to end</h3>
+            <figure class="flow">
+              <ol>
+                <li><strong>Sources</strong><span>Pipelines, Dataflows Gen2, shortcuts</span></li>
+                <li><strong>Lakehouse</strong><span>Bronze → silver → gold Delta tables</span></li>
+                <li><strong>Direct Lake model</strong><span>No import refresh</span></li>
+                <li><strong>Power BI reports</strong><span>Same workspace and capacity</span></li>
+              </ol>
+            </figure>
+            <p>
+              A good fit for organisations already on Microsoft 365 and Power BI Premium, with no existing
+              warehouse to protect. One platform, one security model, one bill. The trade-off is that every
+              workload shares the capacity: a heavy Spark job can affect report interactivity on the same SKU, so
+              it's common to separate engineering and reporting onto different capacities as usage grows.
+              <a href="fabric-lakehouse-medallion-pyspark.html">This walkthrough</a> builds the lakehouse layers
+              in PySpark.
+            </p>
+
+            <h3>3. Snowflake for the warehouse, Fabric for consumption</h3>
+            <figure class="flow">
+              <ol>
+                <li><strong>Snowflake</strong><span>Existing curated tables</span></li>
+                <li><strong>Fabric mirroring</strong><span>Near real-time replica in OneLake</span></li>
+                <li><strong>Direct Lake model</strong><span>Reads the mirrored Delta tables</span></li>
+                <li><strong>Power BI reports</strong><span>Without DirectQuery load on Snowflake</span></li>
+              </ol>
+            </figure>
+            <p>
+              <strong>Mirroring</strong> replicates selected Snowflake tables into OneLake as Delta tables and keeps
+              them in sync. Reports then use Direct Lake without running queries against Snowflake warehouses, and
+              the data is also available to Fabric notebooks and other workloads. The alternative direction also
+              exists: Snowflake can work with Iceberg tables stored in OneLake, which avoids copying data. Both
+              are relatively new integrations, so check current regional availability and limitations before
+              committing to them.
+            </p>
+
+            <h2 data-toc="How I'd decide">How I'd decide</h2>
+            <ol>
+              <li><strong>Start from where the data and skills are.</strong> A mature Snowflake estate with SQL-first engineers shouldn't be migrated just to use Direct Lake.</li>
+              <li><strong>Look at the reporting pattern.</strong> Large models that need near real-time data without DirectQuery latency favour Direct Lake.</li>
+              <li><strong>Model the cost both ways.</strong> Snowflake costs follow warehouse uptime; Fabric costs follow the capacity size you need for the peak. Bursty workloads and always-on workloads come out differently.</li>
+              <li><strong>Keep the semantic model portable.</strong> A clean star schema with measures in the model, not in the source, moves between Import, DirectQuery and Direct Lake with little rework.</li>
+            </ol>
+
+            <h2>Wrapping up</h2>
+            <p>
+              Snowflake is a strong, SQL-centric warehouse; Fabric is an integrated platform whose standout feature
+              for BI is Direct Lake. They overlap, but they also connect: mirroring and open table formats mean
+              choosing one no longer rules out the other. Design the gold layer as a clean star schema and the
+              platform underneath becomes a decision you can revisit.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-cloud">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>Microsoft Fabric</span><span>Snowflake</span><span>Architecture</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

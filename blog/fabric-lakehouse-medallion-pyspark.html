@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A practical bronze, silver and gold lakehouse in Microsoft Fabric: ingesting files with PySpark notebooks, deduplicating and merging into Delta tables, optimising with V-Order and orchestrating with a data pipeline for Direct Lake reporting." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Building a Medallion Lakehouse in Microsoft Fabric with PySpark" />
+    <meta property="og:description" content="Bronze, silver and gold Delta tables in a Fabric lakehouse, built with PySpark notebooks and served to Power BI with Direct Lake." />
+    <meta property="article:published_time" content="2025-11-12" />
+    <title>Building a Medallion Lakehouse in Microsoft Fabric with PySpark — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-cloud">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=cloud" class="current">Fabric &amp; Snowflake</a>
+          </div>
+          <h1>Building a Medallion Lakehouse in Microsoft Fabric with PySpark</h1>
+          <p class="post-dek">
+            The medallion architecture is easy to draw and easy to get vague about. This is a concrete version in Microsoft Fabric: what each layer holds, the PySpark that moves data between them, and how the gold layer feeds Direct Lake.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2025-11-12">Nov 12, 2025</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-cloud" id="post-content">
+            <p>
+              A Fabric lakehouse stores tables as Delta Parquet in OneLake. You can query them with Spark, with T-SQL through
+              the SQL analytics endpoint, and from Power BI with Direct Lake. The <strong>medallion architecture</strong> is a
+              way of organising those tables into layers of increasing quality, so it's always clear which data is raw, which
+              is cleaned and which is ready for reporting.
+            </p>
+
+            <figure class="flow">
+              <ol>
+                <li><strong>Files</strong><span>Landing area: CSV, JSON, Parquet as received</span></li>
+                <li><strong>Bronze</strong><span>Raw rows as Delta, plus load metadata</span></li>
+                <li><strong>Silver</strong><span>Typed, deduplicated, merged by key</span></li>
+                <li><strong>Gold</strong><span>Star schema: facts and dimensions</span></li>
+                <li><strong>Direct Lake</strong><span>Semantic model and reports</span></li>
+              </ol>
+              <figcaption>Each layer is only ever built from the one before it.</figcaption>
+            </figure>
+
+            <p>
+              Teams split this in different ways: one lakehouse per layer, or one lakehouse with clear naming. Separate
+              lakehouses make permissions easier (analysts can be given gold only); a single lakehouse is simpler to start
+              with. The code below assumes a notebook with a default lakehouse attached, so relative paths like
+              <code>Files/…</code> and table names resolve against it.
+            </p>
+
+            <h2 data-toc="Bronze">Bronze: land the data as-is</h2>
+            <p>
+              Bronze is an append-only copy of what arrived, with enough metadata to trace every row back to its source
+              file. Don't clean anything here; if a transformation is wrong later, you can rebuild silver from bronze.
+            </p>
+
+<pre data-lang="PySpark"><code>from pyspark.sql import functions as F
+
+raw = (
+    spark.read
+         .option("header", True)
+         .csv("Files/landing/orders/2025/11/*.csv")
+)
+
+bronze = (
+    raw.withColumn("_source_file", F.col("_metadata.file_path"))
+       .withColumn("_ingested_at", F.current_timestamp())
+)
+
+bronze.write.mode("append").format("delta").saveAsTable("bronze_orders")</code></pre>
+            <div class="callout">
+              <span class="callout-icon" aria-hidden="true">💡</span>
+              <p>
+                <strong>Reading everything as strings is fine in bronze.</strong> Leaving <code>inferSchema</code> off means a
+                malformed value in a new file can't fail the ingestion or silently change a column type. Typing happens in
+                silver, where you can handle bad values deliberately.
+              </p>
+            </div>
+
+            <h2 data-toc="Silver">Silver: type, clean, deduplicate and merge</h2>
+            <p>
+              Silver holds one clean row per business key. The notebook reads new bronze rows, casts types, keeps only the
+              latest version of each order and merges into the silver table:
+            </p>
+
+<pre data-lang="PySpark"><code>from delta.tables import DeltaTable
+from pyspark.sql import Window
+
+# Only rows ingested since the last successful silver load
+last_load = spark.sql(
+    "SELECT COALESCE(MAX(_ingested_at), TIMESTAMP '1900-01-01') AS ts FROM silver_orders"
+).first()["ts"]
+
+typed = (
+    spark.table("bronze_orders")
+         .where(F.col("_ingested_at") &gt; F.lit(last_load))
+         .select(
+             F.col("order_id").cast("bigint"),
+             F.col("customer_id").cast("string"),
+             F.to_date("order_date", "yyyy-MM-dd").alias("order_date"),
+             F.col("status"),
+             F.col("amount").cast("decimal(18,2)"),
+             F.to_timestamp("updated_at").alias("updated_at"),
+             "_ingested_at",
+         )
+         .where(F.col("order_id").isNotNull())
+)
+
+# Keep the latest version of each order within this batch
+latest = (
+    typed.withColumn(
+             "_rn",
+             F.row_number().over(
+                 Window.partitionBy("order_id").orderBy(F.col("updated_at").desc())
+             ),
+         )
+         .where("_rn = 1")
+         .drop("_rn")
+)
+
+target = DeltaTable.forName(spark, "silver_orders")
+(
+    target.alias("t")
+          .merge(latest.alias("s"), "t.order_id = s.order_id")
+          .whenMatchedUpdateAll(condition="s.updated_at &gt;= t.updated_at")
+          .whenNotMatchedInsertAll()
+          .execute()
+)</code></pre>
+            <p>
+              The <code>condition</code> on the update stops an older, late-arriving file from overwriting a newer version.
+              The first time, create <code>silver_orders</code> with the target schema (for example by writing an empty
+              DataFrame with <code>saveAsTable</code>) so <code>DeltaTable.forName</code> has something to merge into.
+            </p>
+            <p>
+              This watermark approach is deliberately simple. For larger volumes, Delta's <strong>change data feed</strong>
+              or Spark Structured Streaming with checkpoints give you the same "only new rows" behaviour with less custom
+              state.
+            </p>
+
+            <h2 data-toc="Gold">Gold: model for reporting</h2>
+            <p>
+              Gold is shaped for the semantic model: a star schema with clean names, conformed dimensions and facts at a
+              clear grain. Because Direct Lake reads Delta tables (views cause DirectQuery fallback on the SQL analytics
+              endpoint), the gold layer should be materialised as tables:
+            </p>
+
+<pre data-lang="PySpark"><code>fact_sales = spark.sql("""
+    SELECT o.order_id,
+           CAST(date_format(o.order_date, 'yyyyMMdd') AS INT) AS date_key,
+           c.customer_key,
+           o.amount AS sales_amount
+    FROM   silver_orders o
+    LEFT JOIN gold_dim_customer c
+           ON c.customer_id = o.customer_id
+    WHERE  o.status &lt;&gt; 'CANCELLED'
+""")
+
+fact_sales.write.mode("overwrite").format("delta").saveAsTable("gold_fact_sales")</code></pre>
+            <p>
+              A full overwrite is fine for small and medium facts and is the easiest to reason about. When it becomes too
+              slow, switch to a merge or partition-level overwrite, just as in silver.
+            </p>
+
+            <h2 data-toc="Table maintenance">Keep the tables healthy</h2>
+            <p>
+              Frequent small writes produce many small Parquet files, which slows down Spark, the SQL endpoint and Direct
+              Lake alike. Compact regularly:
+            </p>
+
+<pre data-lang="Spark SQL"><code>OPTIMIZE gold_fact_sales VORDER;
+
+-- Remove files no longer referenced by the table (default retention is 7 days)
+VACUUM gold_fact_sales;</code></pre>
+            <p>
+              <strong>V-Order</strong> is a Fabric write-time optimisation of Parquet files that makes them faster to read,
+              especially for Direct Lake. The lakehouse UI also offers <em>Maintenance</em> on each table to run optimise
+              and vacuum without writing code.
+            </p>
+
+            <h2 data-toc="Orchestration">Orchestrate with a data pipeline</h2>
+            <p>
+              Each layer gets its own notebook, and a Fabric <strong>data pipeline</strong> runs them in order with a
+              Notebook activity per step, connected on success. Mark a cell as a <em>parameter cell</em> in each notebook,
+              and the pipeline can pass values such as a load date or a source folder:
+            </p>
+
+<pre data-lang="PySpark"><code># Parameters cell (toggle "parameter cell" on this cell in the notebook)
+load_date = "2025-11-12"
+source_folder = "Files/landing/orders"</code></pre>
+            <p>
+              Add a failure path that sends an alert (an Office 365 Outlook or Teams activity) so a broken load is noticed
+              before the morning reports are opened.
+            </p>
+
+            <h2 data-toc="Direct Lake">Serving gold with Direct Lake</h2>
+            <p>
+              From the lakehouse, create a new semantic model, select the gold tables, define relationships and add
+              measures. The model reads the Delta tables directly; there's no import refresh to schedule. By default the
+              model picks up changes to the Delta tables automatically, or you can switch that off and "reframe" the model
+              as the last step of the pipeline so reports only see data once the whole load has finished.
+            </p>
+            <div class="callout warn">
+              <span class="callout-icon" aria-hidden="true">⚠️</span>
+              <p>
+                <strong>Check the guardrails for your SKU.</strong> Direct Lake has per-capacity limits on rows per table and
+                Parquet files per table, among others. If a gold table exceeds them on an F SKU, queries fall back to
+                DirectQuery (or fail, depending on the model's settings), so size gold tables with those limits in mind.
+              </p>
+            </div>
+
+            <h2>Wrapping up</h2>
+            <p>
+              Bronze keeps what arrived, silver makes it correct, gold makes it useful. In Fabric each layer is just a set of
+              Delta tables, which means Spark, SQL and Power BI all read the same data with no copies between them. Keep the
+              layers disciplined, keep the tables compacted, and Direct Lake gives you import-like performance without import
+              refreshes.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-cloud">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>Microsoft Fabric</span><span>PySpark</span><span>Lakehouse</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

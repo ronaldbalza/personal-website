@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Comparing the ways to report on Dynamics 365 (Dataverse) data in Power BI: the Dataverse connector and TDS endpoint, Link to Microsoft Fabric, Azure Synapse Link and the Web API, plus handling choice labels, lookups, UTC dates and statecode." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Getting Dynamics 365 Data into Power BI: Dataverse Connector, Fabric Link and the Web API" />
+    <meta property="og:description" content="The Dataverse connector, Link to Fabric and the Web API compared, plus choice labels, lookups and UTC dates." />
+    <meta property="article:published_time" content="2026-07-22" />
+    <title>Getting Dynamics 365 Data into Power BI: Dataverse Connector, Fabric Link and the Web API — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-crm">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=crm" class="current">Salesforce &amp; Dynamics</a>
+          </div>
+          <h1>Getting Dynamics 365 Data into Power BI: Dataverse Connector, Fabric Link and the Web API</h1>
+          <p class="post-dek">
+            Dynamics 365 stores its data in Dataverse, and there are several ways to get it out. They differ a lot in freshness, volume limits and how much modelling they leave you to do. Here's how I choose between them.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2026-07-22">Jul 22, 2026</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-crm" id="post-content">
+            <p>
+              Dynamics 365 Sales, Customer Service and the other model-driven apps keep their data in
+              <strong>Microsoft Dataverse</strong>. Every Dynamics "entity" (account, contact, opportunity, case) is a
+              Dataverse table with a <em>logical name</em> like <code>opportunity</code> and columns like
+              <code>estimatedvalue</code>. Reporting on Dynamics means getting Dataverse tables into a model, and the route you
+              pick shapes everything after it.
+            </p>
+
+            <h2 data-toc="The options">The four main options</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Option</th><th>How it works</th><th>Good for</th></tr></thead>
+                <tbody>
+                  <tr><td>Dataverse connector</td><td>Power BI queries Dataverse through its read-only SQL (TDS) endpoint, in Import or DirectQuery</td><td>Small to medium tables, quick reports, near-live DirectQuery</td></tr>
+                  <tr><td>Link to Microsoft Fabric</td><td>Dataverse maintains Delta copies of selected tables in Dataverse-managed storage, exposed to a Fabric workspace through shortcuts</td><td>Large volumes, joining with other data, Direct Lake</td></tr>
+                  <tr><td>Azure Synapse Link for Dataverse</td><td>Continuously exports tables to your own ADLS Gen2 account (optionally as Delta)</td><td>Existing Azure data platforms that want the files</td></tr>
+                  <tr><td>Web API (OData)</td><td>REST queries against <code>/api/data/v9.2/</code></td><td>Custom extraction in a pipeline, specific filtered pulls</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h2 data-toc="Dataverse connector">The Dataverse connector (TDS endpoint)</h2>
+            <p>
+              In Power BI Desktop, <em>Get data → Dataverse</em> lists your environments and their tables. Under the hood it
+              uses the Dataverse <strong>TDS endpoint</strong>, which accepts a subset of T-SQL. The endpoint has to be enabled
+              for the environment (Power Platform admin center → environment Settings → Product → Features), and it respects
+              Dataverse security: users only see the rows their security roles allow.
+            </p>
+            <p>
+              Because it speaks SQL, you can also connect from SQL Server Management Studio or Azure Data Studio using the
+              environment host (e.g. <code>yourorg.crm.dynamics.com</code>) and Microsoft Entra authentication, which is handy
+              for exploring data before modelling it:
+            </p>
+
+<pre data-lang="SQL"><code>SELECT TOP 100
+       o.opportunityid,
+       o.name,
+       o.statecode,
+       o.statecodename,          -- label for the choice value
+       o.estimatedvalue,
+       o.estimatedvalue_base,    -- converted to the org's base currency
+       o.parentaccountid,
+       o.parentaccountidname,    -- display name of the lookup target
+       o.owneridname,
+       o.estimatedclosedate,
+       o.modifiedon
+FROM   opportunity AS o
+WHERE  o.statecode = 0;          -- open opportunities</code></pre>
+            <p>
+              Notice the <code>…name</code> columns: the SQL endpoint exposes a label column next to each choice
+              (option set) and lookup column, which saves you building lookup tables for status reasons and owners.
+            </p>
+            <div class="callout warn">
+              <span class="callout-icon" aria-hidden="true">⚠️</span>
+              <p>
+                <strong>Know the limits.</strong> The TDS endpoint is designed for reporting queries, not bulk extraction.
+                Queries are subject to documented result-size and timeout limits, so importing very large tables (activity
+                history, audit-style tables) through the connector can fail or be slow. That's the point to move to Link to
+                Fabric or Synapse Link.
+              </p>
+            </div>
+
+            <h2 data-toc="Link to Fabric">Link to Microsoft Fabric</h2>
+            <p>
+              For larger models, <strong>Link to Microsoft Fabric</strong> (set up from the Power Apps maker portal under
+              Analyze → Link to Microsoft Fabric) has Dataverse keep Delta tables of your selected tables in sync, and creates a
+              Fabric lakehouse with shortcuts to them. From there you can:
+            </p>
+            <ul>
+              <li>Query them through the lakehouse's SQL analytics endpoint.</li>
+              <li>Join them with data from other systems in notebooks or a warehouse (for example, Salesforce data for a <a href="salesforce-dynamics-unified-sales-reporting.html">combined pipeline report</a>).</li>
+              <li>Build gold tables and a Direct Lake semantic model on top, with no import refresh against Dataverse.</li>
+            </ul>
+            <p>
+              It requires a Fabric capacity in the same region as the Dataverse environment, and the data still counts toward
+              Dataverse storage. Check both before proposing it.
+            </p>
+
+            <h2 data-toc="Web API">The Web API, when you need control</h2>
+            <p>
+              For pipeline-driven extraction (for example, an ETL tool loading Snowflake), the Dataverse Web API is the
+              standard interface. Request formatted values with the <code>Prefer</code> header to get labels alongside codes:
+            </p>
+
+<pre data-lang="HTTP"><code>GET https://yourorg.crm.dynamics.com/api/data/v9.2/opportunities
+    ?$select=name,estimatedvalue,statecode,_parentaccountid_value,modifiedon
+    &amp;$filter=modifiedon gt 2026-07-01T00:00:00Z
+Authorization: Bearer {token}
+Accept: application/json
+Prefer: odata.include-annotations="OData.Community.Display.V1.FormattedValue",odata.maxpagesize=5000</code></pre>
+            <p>
+              Lookups appear as <code>_&lt;name&gt;_value</code> properties holding the related record's GUID. Results are paged:
+              keep following <code>@odata.nextLink</code> until it's absent. Use an app registration (application user) with a
+              security role that grants read access, rather than a named user's credentials.
+            </p>
+
+            <h2 data-toc="Modelling gotchas">Modelling gotchas that apply whichever route you use</h2>
+            <ul>
+              <li>
+                <strong>Logical names vs display names.</strong> The UI says "Est. Revenue"; the column is
+                <code>estimatedvalue</code>. Rename in the model or a view so report authors see business-friendly names.
+              </li>
+              <li>
+                <strong>Status vs status reason.</strong> <code>statecode</code> is the system state (for opportunity: 0 Open,
+                1 Won, 2 Lost) and is fixed; <code>statuscode</code> is the customisable status reason within each state. Base
+                KPIs on <code>statecode</code>, and use <code>statuscode</code> for detail.
+              </li>
+              <li>
+                <strong>Dates are stored in UTC.</strong> Date/time columns with <em>User Local</em> behaviour are stored in
+                UTC and converted in the app for each user. A deal closed at 9 am in Sydney is stored on the previous day in UTC,
+                so convert to the business time zone before deriving a date key, or month-end totals will drift.
+              </li>
+              <li>
+                <strong>Polymorphic lookups.</strong> <code>customerid</code> on an opportunity can point to an account
+                <em>or</em> a contact. Use <code>parentaccountid</code> when you need the account, or resolve the type explicitly.
+              </li>
+              <li>
+                <strong>Inactive records.</strong> Most tables have active/inactive states. Decide per report whether inactive
+                accounts and contacts belong in the dimension (usually yes, so historical facts still find their customer).
+              </li>
+            </ul>
+
+            <h2 data-toc="How I'd choose">How I'd choose</h2>
+            <ol>
+              <li><strong>A report on a handful of modest tables</strong> → Dataverse connector, Import mode, scheduled refresh.</li>
+              <li><strong>A report that must reflect changes within minutes</strong> → Dataverse connector in DirectQuery, kept small and simple.</li>
+              <li><strong>Large tables, or Dynamics joined with other systems</strong> → Link to Fabric (or Synapse Link, if the platform is Azure-based), then a proper gold layer.</li>
+              <li><strong>A central warehouse elsewhere, such as Snowflake</strong> → Web API extraction via your ETL tool, incremental on <code>modifiedon</code>.</li>
+            </ol>
+
+            <h2>Wrapping up</h2>
+            <p>
+              There's no single "right" way to get Dynamics data into Power BI. There's a right way for the data volume,
+              freshness and platform you have. Whichever you pick, deal with labels, status codes and UTC dates once, in a view
+              or gold table, so every report built on Dynamics data gets them right automatically.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-crm">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>MS Dynamics</span><span>Dataverse</span><span>Power BI</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

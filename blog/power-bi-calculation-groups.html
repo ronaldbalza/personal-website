@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="How to use calculation groups in Power BI Desktop to apply YTD, prior year and YoY % to any measure with SELECTEDMEASURE, format string expressions, ISSELECTEDMEASURE and precedence." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Calculation Groups in Power BI: Time Intelligence Without Measure Explosion" />
+    <meta property="og:description" content="Apply YTD, prior year and YoY % to every measure with one calculation group instead of dozens of measures." />
+    <meta property="article:published_time" content="2026-10-08" />
+    <title>Calculation Groups in Power BI: Time Intelligence Without Measure Explosion — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-powerbi">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=powerbi" class="current">Power BI &amp; DAX</a>
+          </div>
+          <h1>Calculation Groups in Power BI: Time Intelligence Without Measure Explosion</h1>
+          <p class="post-dek">
+            Ten base measures times six time calculations is sixty measures to write, name and maintain. A calculation group replaces them with six reusable items. Here's how to build one, and the behaviours that trip people up.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2026-10-08">Oct 8, 2026</time><span class="dot">•</span><span>8 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-powerbi" id="post-content">
+            <p>
+              Time intelligence measures follow the same shape every time: wrap a base measure in
+              <code>CALCULATE</code> with a date filter. That's easy for one measure, but a model with Sales,
+              Cost, Margin, Quantity, Orders and a few more quickly ends up with <code>Sales YTD</code>,
+              <code>Cost YTD</code>, <code>Margin YTD</code>, <code>Sales PY</code>, <code>Cost PY</code>… all
+              identical apart from the measure inside.
+            </p>
+            <p>
+              <strong>Calculation groups</strong> solve this. A calculation group is a special table whose rows
+              (<em>calculation items</em>) are DAX expressions that modify whatever measure is being evaluated.
+              Put the calculation group's column on a visual or slicer, and every measure in that visual is
+              transformed by the selected item.
+            </p>
+
+            <h2 data-toc="Creating one in Desktop">Creating a calculation group in Power BI Desktop</h2>
+            <p>
+              Calculation groups used to require Tabular Editor. They can now be authored directly in Power BI
+              Desktop:
+            </p>
+            <ol>
+              <li>Open <strong>Model view</strong> and select <strong>Calculation group</strong> on the Home ribbon.</li>
+              <li>Rename the group (e.g. <code>Time Calc</code>) and its column (e.g. <code>Calculation</code>).</li>
+              <li>Add calculation items in the Data pane and write each item's expression in the formula bar.</li>
+            </ol>
+            <div class="callout">
+              <span class="callout-icon" aria-hidden="true">💡</span>
+              <p>
+                <strong>Implicit measures are switched off.</strong> When you create a calculation group, Power BI
+                turns on the model's <em>Discourage implicit measures</em> setting, because calculation groups only
+                apply to explicit measures. Dragging a numeric column onto a visual no longer creates an automatic
+                SUM, so make sure every number the report needs exists as a measure.
+              </p>
+            </div>
+
+            <h2 data-toc="The calculation items">The calculation items</h2>
+            <p>
+              The key function is <code>SELECTEDMEASURE()</code>: a placeholder for whichever measure is currently
+              being evaluated. These items assume a marked date table called <code>'Date'</code>:
+            </p>
+
+<pre data-lang="DAX"><code>-- Current
+SELECTEDMEASURE ()
+
+-- YTD
+CALCULATE ( SELECTEDMEASURE (), DATESYTD ( 'Date'[Date] ) )
+
+-- PY
+CALCULATE ( SELECTEDMEASURE (), SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+
+-- PY YTD
+CALCULATE (
+    SELECTEDMEASURE (),
+    DATESYTD ( SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+)
+
+-- YoY
+VAR _cur = SELECTEDMEASURE ()
+VAR _py  = CALCULATE ( SELECTEDMEASURE (), SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+RETURN
+    IF ( NOT ISBLANK ( _cur ) &amp;&amp; NOT ISBLANK ( _py ), _cur - _py )
+
+-- YoY %
+VAR _cur = SELECTEDMEASURE ()
+VAR _py  = CALCULATE ( SELECTEDMEASURE (), SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+RETURN
+    DIVIDE ( _cur - _py, _py )</code></pre>
+            <p>
+              Set the <strong>Ordinal</strong> property on each item (0, 1, 2…) so they appear in a sensible order on
+              visuals rather than alphabetically.
+            </p>
+            <p>
+              Now build a matrix with <code>'Date'[Year]</code> and <code>'Date'[Month]</code> on rows,
+              <code>Time Calc[Calculation]</code> on columns and any measures in values. Every measure gets every time
+              calculation, with no new measures written.
+            </p>
+
+            <h2 data-toc="Format strings">Getting the format strings right</h2>
+            <p>
+              The first thing you'll notice is that <em>YoY %</em> shows as a currency, because it inherits the format
+              of the underlying measure. Calculation items have a <strong>format string expression</strong> to fix
+              this. For the YoY % item:
+            </p>
+
+<pre data-lang="DAX"><code>"0.0%"</code></pre>
+            <p>
+              Format string expressions are DAX, so they can be dynamic. To keep the original measure's format
+              but add an explicit sign for the YoY item:
+            </p>
+
+<pre data-lang="DAX"><code>VAR _fmt = SELECTEDMEASUREFORMATSTRING ()
+RETURN
+    "+" &amp; _fmt &amp; ";-" &amp; _fmt</code></pre>
+            <div class="callout warn">
+              <span class="callout-icon" aria-hidden="true">⚠️</span>
+              <p>
+                <strong>Test this with your actual formats.</strong> Concatenating format sections assumes the base
+                format string has a single section. If a measure already uses a multi-section format (positive;
+                negative;zero), build the YoY format explicitly instead.
+              </p>
+            </div>
+
+            <h2 data-toc="Excluding measures">Excluding measures that shouldn't be transformed</h2>
+            <p>
+              Not every measure makes sense with every item. YTD of a percentage like <em>Margin %</em> is fine
+              (it recalculates the ratio over the YTD period), but YTD of a measure that's already cumulative, or
+              of a "headcount at period end" measure, produces nonsense. Use <code>ISSELECTEDMEASURE</code> to pass
+              those through unchanged:
+            </p>
+
+<pre data-lang="DAX"><code>-- YTD, skipping semi-additive and already-cumulative measures
+IF (
+    ISSELECTEDMEASURE ( [Headcount], [Sales Running Total] ),
+    SELECTEDMEASURE (),
+    CALCULATE ( SELECTEDMEASURE (), DATESYTD ( 'Date'[Date] ) )
+)</code></pre>
+            <p>
+              <code>SELECTEDMEASURENAME()</code> also exists, but matching on names breaks silently when someone
+              renames a measure. <code>ISSELECTEDMEASURE</code> references the measure itself, so a rename is
+              handled for you.
+            </p>
+
+            <h2 data-toc="Behaviours to know">Behaviours that surprise people</h2>
+            <ul>
+              <li>
+                <strong>No selection means no change.</strong> By default, if no calculation item is filtered (or
+                several are selected), measures evaluate without any transformation. The group's
+                <em>multiple or empty selection expression</em> can override this. A slicer on the calculation column with single select and a
+                default of <em>Current</em> avoids confusion.
+              </li>
+              <li>
+                <strong>Measures referenced inside other measures are transformed too.</strong> If
+                <code>[Margin %]</code> is <code>DIVIDE ( [Margin], [Sales] )</code>, the YTD item applies to the
+                references inside it, which is usually what you want.
+              </li>
+              <li>
+                <strong>Precedence.</strong> With more than one calculation group (say, time intelligence and
+                currency conversion), the <strong>Precedence</strong> property on each group decides which is
+                applied first. A higher precedence group is applied first, as the outer calculation. Order matters
+                for non-linear calculations like percentages, so test the combinations.
+              </li>
+              <li>
+                <strong>Only measures are affected.</strong> Calculation items modify measures, not columns, so
+                visual-level aggregations of raw columns aren't transformed.
+              </li>
+            </ul>
+
+            <h2 data-toc="Dynamic format strings">Calculation groups versus dynamic format strings</h2>
+            <p>
+              Power BI also supports <strong>dynamic format strings for measures</strong>, which reuse the same
+              format-string-expression idea on a single measure. If you only need one measure to change format by
+              context (for example, by selected currency), that's simpler than a calculation group. Calculation groups
+              are for when the same logic has to apply to many measures.
+            </p>
+
+            <h2>Wrapping up</h2>
+            <p>
+              A small calculation group (Current, YTD, PY, PY YTD, YoY and YoY %) replaces a large block of
+              near-identical measures, keeps the logic in one place and makes a model much easier to navigate. Get the
+              date table right, set format string expressions and ordinals, exclude measures that shouldn't be
+              transformed, and the rest of the model stays small and readable.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-powerbi">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>DAX</span><span>Calculation Groups</span><span>Data Modeling</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

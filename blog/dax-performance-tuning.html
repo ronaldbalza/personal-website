@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A repeatable workflow for finding and fixing slow Power BI measures: Performance Analyzer, DAX Studio server timings, storage engine versus formula engine, VertiPaq Analyzer and the DAX rewrites that help most." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Tuning Slow DAX: A Practical Workflow with Performance Analyzer and DAX Studio" />
+    <meta property="og:description" content="Performance Analyzer, DAX Studio server timings, VertiPaq Analyzer and the rewrites that make slow measures fast." />
+    <meta property="article:published_time" content="2025-01-14" />
+    <title>Tuning Slow DAX: A Practical Workflow with Performance Analyzer and DAX Studio — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-powerbi">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=powerbi" class="current">Power BI &amp; DAX</a>
+          </div>
+          <h1>Tuning Slow DAX: A Practical Workflow with Performance Analyzer and DAX Studio</h1>
+          <p class="post-dek">
+            "The report is slow" can mean a slow measure, a bloated model, too many visuals or a source query. This is the workflow I use to find out which, and the DAX changes that usually fix it.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2025-01-14">Jan 14, 2025</time><span class="dot">•</span><span>9 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose cat-powerbi" id="post-content">
+            <p>
+              Performance tuning in Power BI goes wrong when it starts with guesses: rewriting a measure that wasn't the problem,
+              or blaming the data source for a slow visual that's actually a model design issue. A few free tools make it
+              possible to measure instead of guess.
+            </p>
+
+            <figure class="flow">
+              <ol>
+                <li><strong>Performance Analyzer</strong><span>Which visual is slow?</span></li>
+                <li><strong>DAX Studio</strong><span>Is it the storage engine or the formula engine?</span></li>
+                <li><strong>VertiPaq Analyzer</strong><span>Is the model itself too big?</span></li>
+                <li><strong>Rewrite & re-test</strong><span>Change one thing, measure again</span></li>
+              </ol>
+            </figure>
+
+            <h2 data-toc="Find the slow visual">Step 1 — Find the slow visual</h2>
+            <p>
+              In Power BI Desktop, open <strong>Performance Analyzer</strong> (Optimize ribbon), click <em>Start recording</em>, then
+              <em>Refresh visuals</em>. Each visual reports three timings:
+            </p>
+            <ul>
+              <li><strong>DAX query</strong>: time for the semantic model to answer the visual's query.</li>
+              <li><strong>Visual display</strong>: time to render, which grows with the number of data points and with some custom visuals.</li>
+              <li><strong>Other</strong>: mostly waiting, for example behind other visuals on the page.</li>
+            </ul>
+            <p>
+              If DAX query dominates, the problem is in the model or measures. Use <em>Copy query</em> on that visual to take the
+              exact query into DAX Studio. If visual display dominates, reduce the data points or swap the visual.
+            </p>
+
+            <h2 data-toc="Server timings">Step 2 — Read the server timings</h2>
+            <p>
+              <a href="https://daxstudio.org">DAX Studio</a> connects to the model open in Desktop. Paste
+              the query, turn on <strong>Server Timings</strong> and run it (clear the cache first, so you measure a cold run). The
+              key split is between the two engines:
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Engine</th><th>What it does</th><th>Characteristics</th></tr></thead>
+                <tbody>
+                  <tr><td>Storage engine (SE)</td><td>Scans compressed columns, applies filters, does simple aggregations</td><td>Fast and multi-threaded; results can be cached</td></tr>
+                  <tr><td>Formula engine (FE)</td><td>Everything else: complex expressions, iterating rows, combining SE results</td><td>Single-threaded; no cache</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              A healthy query spends most of its time in the storage engine with a small number of queries. Warning signs:
+            </p>
+            <ul>
+              <li><strong>High FE time</strong>: logic the storage engine couldn't do, often row-by-row iteration with complex expressions.</li>
+              <li><strong>Many SE queries</strong> (hundreds or thousands): the formula engine is calling the storage engine once per row or per cell.</li>
+              <li><strong><code>CallbackDataID</code></strong> in the SE query text: the storage engine had to call back into the formula engine for each row, which is slow and prevents caching.</li>
+              <li><strong>Large materialisations</strong>: an SE query returning far more rows than the visual shows.</li>
+            </ul>
+
+            <h2 data-toc="Check the model">Step 3 — Check the model size</h2>
+            <p>
+              Slow measures are sometimes just big columns. DAX Studio's <strong>View Metrics</strong> (VertiPaq Analyzer) lists every
+              table and column with its size and cardinality. The usual suspects:
+            </p>
+            <ul>
+              <li><strong>High-cardinality columns</strong> nobody uses: transaction GUIDs, free-text comments, timestamps to the second.</li>
+              <li><strong>Datetime columns</strong> where a date is enough: splitting date and time into two columns reduces cardinality dramatically.</li>
+              <li><strong>Auto date/time tables</strong>: Power BI creates a hidden date table for every date column when this option is on. With a proper date table, turn it off (Options → Data Load).</li>
+            </ul>
+            <p>
+              Removing an unused column is the cheapest performance win there is: less memory, faster refresh and faster scans.
+            </p>
+
+            <h2 data-toc="Rewrites that help">Step 4 — The rewrites that help most</h2>
+
+            <h3>Filter columns, not tables</h3>
+            <p>
+              Passing a whole table to <code>FILTER</code> inside <code>CALCULATE</code> forces the engine to work with every column
+              of that table. Filtering just the column you need lets the storage engine apply it directly:
+            </p>
+
+<pre data-lang="DAX"><code>-- Slower: iterates the whole Sales table
+Large Orders Sales =
+CALCULATE ( [Sales Amount], FILTER ( Sales, Sales[NetAmount] &gt; 1000 ) )
+
+-- Faster: a simple column predicate
+Large Orders Sales =
+CALCULATE ( [Sales Amount], Sales[NetAmount] &gt; 1000 )</code></pre>
+            <p>
+              Note the two aren't always identical in meaning: the boolean form replaces any existing filter on
+              <code>Sales[NetAmount]</code>. Wrap it in <code>KEEPFILTERS</code> if it should intersect with filters from the report
+              instead.
+            </p>
+
+            <h3>Store intermediate results in variables</h3>
+            <p>
+              Variables are evaluated once, where they're defined. Referencing a measure several times in an expression may evaluate it
+              several times; a variable avoids that and makes the code easier to read:
+            </p>
+
+<pre data-lang="DAX"><code>Margin % =
+VAR _sales = [Sales Amount]
+VAR _cost  = [Cost Amount]
+RETURN
+    IF ( _sales &lt;&gt; 0, ( _sales - _cost ) / _sales )</code></pre>
+
+            <h3>Keep iterators simple</h3>
+            <p>
+              <code>SUMX</code> over a fact table is fine when the expression per row is simple arithmetic, which the storage engine can
+              handle. Conditional logic per row (<code>IF</code>, <code>SWITCH</code>) is what tends to produce
+              <code>CallbackDataID</code>. Often the condition can move into a filter instead:
+            </p>
+
+<pre data-lang="DAX"><code>-- Per-row IF inside the iterator
+Online Sales =
+SUMX ( Sales, IF ( Sales[Channel] = "Online", Sales[Qty] * Sales[UnitPrice] ) )
+
+-- Condition as a filter; the iterator stays simple
+-- (KEEPFILTERS keeps the original behaviour when a channel slicer is applied)
+Online Sales =
+CALCULATE (
+    SUMX ( Sales, Sales[Qty] * Sales[UnitPrice] ),
+    KEEPFILTERS ( Sales[Channel] = "Online" )
+)</code></pre>
+            <p>
+              If the expression is the same on every refresh (like <code>Qty × UnitPrice</code>), consider computing it upstream as a
+              column in the source or Power Query, so the measure becomes a plain <code>SUM</code>.
+            </p>
+
+            <h3>Watch out for measures that never return blank</h3>
+            <p>
+              Power BI hides rows where every measure is blank. A measure that returns <code>0</code> instead of blank, for example
+              <code>[Sales Amount] + 0</code>, forces the engine to evaluate and show every combination of the row and column fields,
+              which can turn a 500-row matrix into a 500,000-row one. Only replace blanks with zeros when the business genuinely needs
+              to see them, and only in measures used in small visuals.
+            </p>
+
+            <div class="callout">
+              <span class="callout-icon" aria-hidden="true">💡</span>
+              <p>
+                <strong>Change one thing at a time.</strong> Re-run the query in DAX Studio with a cleared cache after each change
+                and compare the server timings. A rewrite that reads more elegantly isn't always faster, and measuring is the only
+                way to know.
+              </p>
+            </div>
+
+            <h2 data-toc="Beyond DAX">When it isn't DAX at all</h2>
+            <ul>
+              <li><strong>Too many visuals per page:</strong> each sends its own queries. Consolidate, or move detail to drillthrough pages.</li>
+              <li><strong>DirectQuery sources:</strong> the time is in the source. Check the SQL generated in Performance Analyzer and tune the source, or consider aggregations or Import.</li>
+              <li><strong>Bidirectional and many-to-many relationships:</strong> they expand filter propagation and can make simple queries expensive. Use them only where the model truly needs them.</li>
+            </ul>
+
+            <h2>Wrapping up</h2>
+            <p>
+              Find the slow visual with Performance Analyzer, find out where the time goes with DAX Studio, check the model's size with
+              VertiPaq Analyzer, then change one thing and measure again. Most slow reports come down to a few causes: a bloated
+              column, a table filter that should be a column filter, or row-by-row logic the storage engine can't handle.
+            </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-powerbi">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>DAX</span><span>Performance</span><span>DAX Studio</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>
