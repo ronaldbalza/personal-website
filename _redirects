@@ -1,0 +1,3 @@
+# Netlify redirects — https://docs.netlify.com/routing/redirects/
+# The Blog / Insights page lives at /blog/ (blog/index.html).
+/blog.html    /blog/    301

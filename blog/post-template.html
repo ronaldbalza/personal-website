@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<!--
+  ═══════════════════════════════════════════════════════════════════
+  BLOG POST TEMPLATE
+  1. Copy this file to blog/<your-post-slug>.html  (lowercase, hyphens)
+  2. Replace every {{PLACEHOLDER}} and delete the noindex meta below.
+  3. Set the category class (cat-powerbi | cat-engineering | cat-cloud |
+     cat-crm | cat-walkthrough) on .post-header and .aside-tags, and the
+     matching ?topic= in the breadcrumb link.
+  4. Add a card for the post at the top of the grid in blog/index.html.
+
+  Content building blocks (use inside <div class="prose" id="post-content">):
+    <h2>Section</h2>                → auto-added to "On this page"
+    <h2 data-toc="Short">Long</h2>  → shorter TOC label
+    <pre data-lang="SQL"><code>…</code></pre>   → code block + copy button
+                                      (escape < as &lt; inside code)
+    <div class="callout"> / <div class="callout warn">  → tip / warning
+    <div class="table-wrap"><table>…</table></div>       → table
+    <blockquote>…</blockquote>, <ul>, <ol>, <code>, <hr>
+  ═══════════════════════════════════════════════════════════════════
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" /><!-- delete this line in real posts -->
+    <meta name="description" content="{{ONE_SENTENCE_SUMMARY}}" />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="{{POST_TITLE}}" />
+    <meta property="og:description" content="{{ONE_SENTENCE_SUMMARY}}" />
+    <title>{{POST_TITLE}} — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <header class="post-header cat-powerbi">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=powerbi" class="current">{{CATEGORY_NAME}}</a>
+          </div>
+          <h1>{{POST_TITLE}}</h1>
+          <p class="post-dek">{{ONE_OR_TWO_SENTENCE_INTRO}}</p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="{{YYYY-MM-DD}}">{{Mon DD, YYYY}}</time><span class="dot">•</span><span>{{N}} min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose" id="post-content">
+
+            <p>{{Opening paragraph — the problem and why it matters.}}</p>
+
+            <h2>{{First section}}</h2>
+            <p>{{Explanation.}}</p>
+
+<pre data-lang="SQL"><code>SELECT *
+FROM   my_table
+WHERE  load_date &gt;= DATEADD(day, -1, CURRENT_DATE);</code></pre>
+
+            <div class="callout">
+              <span class="callout-icon" aria-hidden="true">💡</span>
+              <p><strong>Tip:</strong> {{Helpful aside.}}</p>
+            </div>
+
+            <h2>{{Second section}}</h2>
+            <ol>
+              <li>{{Step one}}</li>
+              <li>{{Step two}}</li>
+            </ol>
+
+            <h2>Wrapping up</h2>
+            <p>{{Key takeaway and what's next.}}</p>
+
+          </div>
+
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-powerbi">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>{{Tag}}</span><span>{{Tag}}</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

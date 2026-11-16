@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Blog & Insights by Ronald Balza — Power BI and DAX tips, ETL and data engineering, Microsoft Fabric, Snowflake, Salesforce and Dynamics integration, and step-by-step project walkthroughs." />
+    <title>Blog &amp; Insights — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ BLOG HERO ═════════════════════════ -->
+      <section class="blog-hero">
+        <!-- Reuses the particle network from script.js -->
+        <canvas id="hero-canvas" aria-hidden="true"></canvas>
+
+        <div class="section-header">
+          <span class="section-tag">Blog / Insights</span>
+          <h1 class="section-title">Notes From the<br><em>Data Trenches</em></h1>
+        </div>
+        <p class="blog-intro">
+          Practical write-ups on Power BI, DAX, ETL pipelines, Microsoft Fabric, Snowflake and
+          CRM data integration — plus step-by-step walkthroughs of how real reporting
+          solutions get designed, built and shipped.
+        </p>
+
+        <div class="blog-toolbar">
+          <label class="blog-search">
+            <span class="sr-only">Search articles</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="blogSearch" placeholder="Search articles, e.g. DAX, Snowflake…" autocomplete="off" />
+          </label>
+
+          <div class="blog-filters" role="group" aria-label="Filter articles by topic">
+            <button type="button" class="filter-chip" data-filter="all" aria-pressed="true">All <span class="chip-count"></span></button>
+            <button type="button" class="filter-chip" data-filter="powerbi" aria-pressed="false">Power BI &amp; DAX <span class="chip-count"></span></button>
+            <button type="button" class="filter-chip" data-filter="engineering" aria-pressed="false">ETL &amp; Data Engineering <span class="chip-count"></span></button>
+            <button type="button" class="filter-chip" data-filter="cloud" aria-pressed="false">Fabric &amp; Snowflake <span class="chip-count"></span></button>
+            <button type="button" class="filter-chip" data-filter="crm" aria-pressed="false">Salesforce &amp; Dynamics <span class="chip-count"></span></button>
+            <button type="button" class="filter-chip" data-filter="walkthrough" aria-pressed="false">Walkthroughs <span class="chip-count"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════ POSTS ═════════════════════════════ -->
+      <!--
+        HOW TO ADD A POST
+        1. Copy blog/post-template.html to blog/<your-slug>.html (same folder as this file) and write the article.
+        2. Add a card below. Published cards are <a> links; planned ones use class "upcoming".
+        3. data-category must be one of: powerbi, engineering, cloud, crm, walkthrough
+           (and the matching cat-* class sets the colour).
+        4. Newest first. Move "featured" to whichever post you want highlighted.
+      -->
+      <section id="posts" aria-label="Articles">
+        <div class="posts-grid" id="postsGrid">
+
+          <!-- ── Published ─────────────────────────────────────────── -->
+          <article class="post-card featured cat-powerbi reveal" data-category="powerbi">
+            <a href="dax-time-intelligence-patterns.html" class="post-card-link">
+              <div class="post-cover">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+                <span class="post-cover-label">Power BI &amp; DAX</span>
+              </div>
+              <div class="post-body">
+                <span class="featured-badge">Latest</span>
+                <div class="post-meta">
+                  <time datetime="2026-11-16">Nov 16, 2026</time><span class="dot">•</span><span>7 min read</span>
+                </div>
+                <h2 class="post-title">5 DAX Time Intelligence Patterns Every Power BI Report Needs</h2>
+                <p class="post-excerpt">
+                  Year-to-date, prior year, YoY growth, rolling 12 months and hiding future dates —
+                  the measures that show up in almost every report, and the date table that makes them work.
+                </p>
+                <div class="post-tags"><span>DAX</span><span>Time Intelligence</span><span>Data Modeling</span></div>
+                <span class="read-more">Read article
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+              </div>
+            </a>
+          </article>
+
+          <!-- ── Coming soon (planned topics) ──────────────────────── -->
+          <article class="post-card upcoming cat-engineering reveal" data-category="engineering">
+            <div class="post-cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="6" height="6" rx="1"/><rect x="16" y="15" width="6" height="6" rx="1"/><path d="M5 9v4a2 2 0 0 0 2 2h9"/><polyline points="13 12 16 15 13 18"/></svg>
+              <span class="post-cover-label">ETL &amp; Data Engineering</span>
+              <span class="soon-badge">Coming soon</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta"><span>In progress</span></div>
+              <h2 class="post-title">Designing Incremental ETL Pipelines in Snowflake</h2>
+              <p class="post-excerpt">Streams, tasks and MERGE patterns for loading only what changed — and keeping reporting views fast and trustworthy.</p>
+              <div class="post-tags"><span>Snowflake</span><span>ETL</span><span>SQL</span></div>
+            </div>
+          </article>
+
+          <article class="post-card upcoming cat-cloud reveal" data-category="cloud">
+            <div class="post-cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              <span class="post-cover-label">Fabric &amp; Snowflake</span>
+              <span class="soon-badge">Coming soon</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta"><span>In progress</span></div>
+              <h2 class="post-title">Microsoft Fabric and Snowflake: Where Each Fits in a Modern BI Stack</h2>
+              <p class="post-excerpt">Lakehouses, OneLake shortcuts and Direct Lake versus a Snowflake warehouse — choosing an architecture for Power BI reporting.</p>
+              <div class="post-tags"><span>Microsoft Fabric</span><span>Snowflake</span><span>Architecture</span></div>
+            </div>
+          </article>
+
+          <article class="post-card upcoming cat-crm reveal" data-category="crm">
+            <div class="post-cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span class="post-cover-label">Salesforce &amp; Dynamics</span>
+              <span class="soon-badge">Coming soon</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta"><span>In progress</span></div>
+              <h2 class="post-title">Reporting on Salesforce and Dynamics Data Without the Headaches</h2>
+              <p class="post-excerpt">Modelling opportunities, accounts and activities from two CRMs into one consistent sales and pipeline dataset.</p>
+              <div class="post-tags"><span>Salesforce</span><span>MS Dynamics</span><span>Data Integration</span></div>
+            </div>
+          </article>
+
+          <article class="post-card upcoming cat-powerbi reveal" data-category="powerbi">
+            <div class="post-cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              <span class="post-cover-label">Power BI &amp; DAX</span>
+              <span class="soon-badge">Coming soon</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta"><span>In progress</span></div>
+              <h2 class="post-title">Data Visualization Rules for Executive Dashboards</h2>
+              <p class="post-excerpt">Layout, colour and chart-choice habits that make a dashboard readable in the five seconds an executive gives it.</p>
+              <div class="post-tags"><span>Power BI</span><span>Data Visualization</span><span>UX</span></div>
+            </div>
+          </article>
+
+          <article class="post-card upcoming cat-walkthrough reveal" data-category="walkthrough">
+            <div class="post-cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              <span class="post-cover-label">Walkthrough</span>
+              <span class="soon-badge">Coming soon</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta"><span>In progress</span></div>
+              <h2 class="post-title">From Raw Data to Dashboard: An End-to-End Power BI Build</h2>
+              <p class="post-excerpt">A step-by-step implementation — source extraction, transformation, semantic model, DAX and the final report.</p>
+              <div class="post-tags"><span>Power Query</span><span>Semantic Model</span><span>Step-by-step</span></div>
+            </div>
+          </article>
+
+          <article class="post-card upcoming cat-walkthrough reveal" data-category="walkthrough">
+            <div class="post-cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <span class="post-cover-label">Walkthrough</span>
+              <span class="soon-badge">Coming soon</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta"><span>In progress</span></div>
+              <h2 class="post-title">How I Build and Showcase My Data Portfolio</h2>
+              <p class="post-excerpt">Picking projects, publishing Power BI reports to the web and presenting real-world technical solutions to hiring managers.</p>
+              <div class="post-tags"><span>Portfolio</span><span>Career</span><span>Publish to Web</span></div>
+            </div>
+          </article>
+
+        </div>
+
+        <p class="posts-empty" id="postsEmpty" hidden>
+          No articles match that search yet. <button type="button" id="resetFilters">Clear filters</button>
+        </p>
+      </section>
+
+      <!-- ═══════════════════════════════ CTA ═══════════════════════════════ -->
+      <section class="blog-cta">
+        <div class="section-header reveal">
+          <span class="section-tag">Stay in the loop</span>
+          <h2 class="section-title">Got a Topic<br><em>Suggestion?</em></h2>
+        </div>
+        <p class="reveal">
+          New articles are shared on LinkedIn. If there's a Power BI, Fabric or data engineering
+          problem you'd like to see broken down, send it my way.
+        </p>
+        <div class="blog-cta-actions reveal">
+          <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="btn-primary">Follow on LinkedIn</a>
+          <a href="../index.html#contact" class="btn-ghost">Get in Touch</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>

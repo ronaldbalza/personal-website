@@ -52,6 +52,14 @@ Since this is a static website with no build process:
 - Use a local server (e.g., Live Server VS Code extension) for development
 - No npm/build commands required
 
+## Blog / Insights
+
+- `blog/index.html` is the article index, served at `/blog/` (search + topic filters, deep-linkable via `/blog/?topic=powerbi|engineering|cloud|crm|walkthrough`)
+- Articles live in `blog/<slug>.html`; start from `blog/post-template.html` (instructions in its header comment)
+- `blog.css` / `blog.js` are loaded only on blog pages, after `styles.css`, `mediaqueries.css` and `script.js`
+- To publish: create the article file, then add a card at the top of the grid in `blog/index.html`
+- Blog pages reuse the main nav/footer with `index.html#section` links; keep the nav in sync across `index.html`, `blog/index.html` and every post
+
 ## Important Notes
 
 - The project links currently show placeholder Power BI dashboard embeds

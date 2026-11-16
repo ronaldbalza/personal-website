@@ -217,7 +217,7 @@ nav.scrolled {
   box-shadow: var(--shadow-lg);
 }
 
-.menu-links.open { max-height: 320px; opacity: 1; }
+.menu-links.open { max-height: 420px; opacity: 1; }
 
 .menu-links li { list-style: none; }
 

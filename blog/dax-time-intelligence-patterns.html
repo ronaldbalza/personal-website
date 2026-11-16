@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Five DAX time intelligence patterns for Power BI — YTD, prior year, YoY %, rolling 12 months and hiding future dates — plus the date table that makes them work." />
+    <meta name="author" content="Ronald Balza" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="5 DAX Time Intelligence Patterns Every Power BI Report Needs" />
+    <meta property="og:description" content="YTD, prior year, YoY %, rolling 12 months and hiding future dates — with copy-ready DAX." />
+    <title>5 DAX Time Intelligence Patterns Every Power BI Report Needs — Ronald Balza</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../mediaqueries.css" />
+    <link rel="stylesheet" href="../blog.css" />
+  </head>
+  <body>
+
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Desktop Nav -->
+    <nav id="desktop-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../index.html#skills">Skills</a></li>
+        <li><a href="../index.html#projects">Projects</a></li>
+        <li><a href="./" aria-current="page">Blog</a></li>
+        <li><a href="../index.html#contact">Contact</a></li>
+      </ul>
+      <a href="../assets/resume.pdf" class="nav-cta" target="_blank">Resume</a>
+    </nav>
+
+    <!-- Mobile Nav -->
+    <nav id="hamburger-nav">
+      <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+      <div class="hamburger-menu">
+        <button class="hamburger-icon" onclick="toggleMenu()" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-links">
+          <li><a href="../index.html#about" onclick="toggleMenu()">About</a></li>
+          <li><a href="../index.html#experience" onclick="toggleMenu()">Experience</a></li>
+          <li><a href="../index.html#skills" onclick="toggleMenu()">Skills</a></li>
+          <li><a href="../index.html#projects" onclick="toggleMenu()">Projects</a></li>
+          <li><a href="./" aria-current="page" onclick="toggleMenu()">Blog</a></li>
+          <li><a href="../index.html#contact" onclick="toggleMenu()">Contact</a></li>
+          <li><a href="../assets/resume.pdf" target="_blank" onclick="toggleMenu()">Resume</a></li>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ═══════════════════════════════ ARTICLE HEADER ════════════════════ -->
+      <header class="post-header cat-powerbi">
+        <div class="post-header-inner">
+          <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="./">Blog</a><span aria-hidden="true">/</span>
+            <a href="./?topic=powerbi" class="current">Power BI &amp; DAX</a>
+          </div>
+          <h1>5 DAX Time Intelligence Patterns Every Power BI Report Needs</h1>
+          <p class="post-dek">
+            Year-to-date, prior year, YoY growth, rolling 12 months and hiding future dates —
+            the measures that show up in almost every report, and the date table that makes them work.
+          </p>
+          <div class="post-byline">
+            <div class="author">
+              <img src="../assets/profile-pic.png" alt="" />
+              <div>
+                <div class="author-name">Ronald Balza</div>
+                <div class="author-role">BI Reporting Analyst</div>
+              </div>
+            </div>
+            <div class="post-meta">
+              <time datetime="2026-11-16">Nov 16, 2026</time><span class="dot">•</span><span>7 min read</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══════════════════════════════ ARTICLE BODY ══════════════════════ -->
+      <section class="post-layout">
+        <article class="post-article">
+          <div class="prose" id="post-content">
+
+          <p>
+            Almost every business question eventually becomes a time question: <em>How are we tracking
+            this year? Are we ahead of last year? What's the trend over the last twelve months?</em>
+            In Power BI, these are answered with DAX time intelligence — and once you have a handful
+            of reliable patterns, you can reuse them on every model you build.
+          </p>
+          <p>
+            Below are the five patterns worth keeping in your toolkit. Every example builds on a single
+            base measure:
+          </p>
+
+<pre data-lang="DAX"><code>Total Sales = SUM ( Sales[SalesAmount] )</code></pre>
+
+          <h2 data-toc="Before you start: the date table">Before you start: a proper date table</h2>
+          <p>
+            Time intelligence functions only behave when they have a dedicated date table to work
+            against. Relying on the auto date/time hierarchy or the raw <code>OrderDate</code> column
+            in your fact table is the most common reason YTD numbers come out wrong.
+          </p>
+
+<pre data-lang="DAX"><code>Date =
+VAR _start = DATE ( YEAR ( MIN ( Sales[OrderDate] ) ), 1, 1 )
+VAR _end   = DATE ( YEAR ( MAX ( Sales[OrderDate] ) ), 12, 31 )
+RETURN
+    ADDCOLUMNS (
+        CALENDAR ( _start, _end ),
+        "Year", YEAR ( [Date] ),
+        "Month Number", MONTH ( [Date] ),
+        "Month", FORMAT ( [Date], "MMM" ),
+        "Year Month", FORMAT ( [Date], "YYYY-MM" )
+    )</code></pre>
+
+          <p>Then make sure the model is set up correctly:</p>
+          <ul>
+            <li>The table covers <strong>complete years</strong> with one row per day and no gaps.</li>
+            <li>It is <strong>marked as a date table</strong> (Table tools → Mark as date table).</li>
+            <li>It has a <strong>one-to-many, single-direction</strong> relationship to <code>Sales[OrderDate]</code>.</li>
+            <li>Visuals and slicers use columns from <code>'Date'</code>, never from the fact table.</li>
+          </ul>
+
+          <div class="callout">
+            <span class="callout-icon" aria-hidden="true">💡</span>
+            <p>
+              <strong>Tip:</strong> if you have a warehouse such as Snowflake or a Fabric lakehouse, build
+              the date dimension there instead. Every report then shares the same fiscal calendar,
+              holidays and week definitions.
+            </p>
+          </div>
+
+          <h2 data-toc="1. Year-to-date">Pattern 1 — Year-to-date</h2>
+          <p>
+            <code>DATESYTD</code> returns every date from the start of the year up to the latest date in
+            the current filter context. Wrapping it in <code>CALCULATE</code> gives you a running
+            year-to-date total.
+          </p>
+
+<pre data-lang="DAX"><code>Sales YTD =
+CALCULATE ( [Total Sales], DATESYTD ( 'Date'[Date] ) )</code></pre>
+
+          <p>
+            Working on a fiscal year? Pass the year-end date as the second argument. For a year ending
+            30 June:
+          </p>
+
+<pre data-lang="DAX"><code>Sales FYTD =
+CALCULATE ( [Total Sales], DATESYTD ( 'Date'[Date], "6/30" ) )</code></pre>
+
+          <h2 data-toc="2. Prior year & YoY %">Pattern 2 — Prior year and YoY growth</h2>
+          <p>
+            <code>SAMEPERIODLASTYEAR</code> shifts the current date selection back exactly one year, so
+            it works at any grain — day, month, quarter or a custom slicer range.
+          </p>
+
+<pre data-lang="DAX"><code>Sales PY =
+CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+
+Sales YoY % =
+VAR _current = [Total Sales]
+VAR _prior   = [Sales PY]
+RETURN
+    DIVIDE ( _current - _prior, _prior )</code></pre>
+
+          <div class="callout">
+            <span class="callout-icon" aria-hidden="true">✅</span>
+            <p>
+              <strong>Use <code>DIVIDE</code>, not the <code>/</code> operator.</strong> It returns blank
+              instead of an error when there's no prior-year value, so new products and first-year
+              periods don't break your visuals.
+            </p>
+          </div>
+
+          <h2 data-toc="3. Rolling 12 months">Pattern 3 — Rolling 12 months</h2>
+          <p>
+            Rolling totals smooth out seasonality and are ideal for trend lines. <code>DATESINPERIOD</code>
+            starts at the last visible date and reaches back the number of intervals you specify.
+          </p>
+
+<pre data-lang="DAX"><code>Sales Rolling 12M =
+CALCULATE (
+    [Total Sales],
+    DATESINPERIOD ( 'Date'[Date], MAX ( 'Date'[Date] ), -12, MONTH )
+)</code></pre>
+
+          <p>
+            Change <code>-12, MONTH</code> to <code>-90, DAY</code> or <code>-4, QUARTER</code> for
+            other windows — the pattern stays the same.
+          </p>
+
+          <h2 data-toc="4. MTD & QTD">Pattern 4 — Month-to-date and quarter-to-date</h2>
+          <p>
+            These follow exactly the same shape as YTD, which is what makes the patterns easy to
+            remember:
+          </p>
+
+<pre data-lang="DAX"><code>Sales MTD =
+CALCULATE ( [Total Sales], DATESMTD ( 'Date'[Date] ) )
+
+Sales QTD =
+CALCULATE ( [Total Sales], DATESQTD ( 'Date'[Date] ) )</code></pre>
+
+          <h2 data-toc="5. Hiding future dates">Pattern 5 — Hiding future dates</h2>
+          <p>
+            Because the date table runs to 31 December, cumulative measures like YTD keep showing the
+            same flat value for every month that hasn't happened yet. That flat line misleads readers.
+            The fix is to blank out any period after the last transaction:
+          </p>
+
+<pre data-lang="DAX"><code>Sales YTD (to date) =
+VAR _lastSale =
+    CALCULATE ( MAX ( Sales[OrderDate] ), ALL ( Sales ) )
+RETURN
+    IF ( MIN ( 'Date'[Date] ) &lt;= _lastSale, [Sales YTD] )</code></pre>
+
+          <div class="callout warn">
+            <span class="callout-icon" aria-hidden="true">⚠️</span>
+            <p>
+              <strong>Watch the filter removal.</strong> <code>ALL ( Sales )</code> finds the latest sale
+              across the whole dataset. If you only removed the date filter, a product that stopped
+              selling in March would have its YTD blanked out from April onwards.
+            </p>
+          </div>
+
+          <h2>Quick reference</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Measure</th><th>Key function</th><th>Answers</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>YTD / FYTD</td><td><code>DATESYTD</code></td><td>How are we tracking this year?</td></tr>
+                <tr><td>Prior year</td><td><code>SAMEPERIODLASTYEAR</code></td><td>What did the same period look like last year?</td></tr>
+                <tr><td>YoY %</td><td><code>DIVIDE</code></td><td>Are we growing?</td></tr>
+                <tr><td>Rolling 12M</td><td><code>DATESINPERIOD</code></td><td>What's the underlying trend?</td></tr>
+                <tr><td>MTD / QTD</td><td><code>DATESMTD</code> / <code>DATESQTD</code></td><td>Where are we in the current period?</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Wrapping up</h2>
+          <p>
+            Get the date table right once, and every one of these measures becomes a two-line
+            <code>CALCULATE</code>. Keep them in a dedicated measure table, give them consistent names,
+            and they'll carry over to every model you build next.
+          </p>
+          <p>
+            Next up in this series: calculation groups, which let you apply all of these patterns to
+            <em>any</em> measure without duplicating them.
+          </p>
+          </div>
+
+          <!-- ── Article footer ─────────────────────────────────────── -->
+          <div class="post-end">
+            <div class="author-card">
+              <img src="../assets/profile-pic.png" alt="Ronald Balza" />
+              <div>
+                <h3>Ronald Balza</h3>
+                <p>
+                  BI Reporting Analyst and Microsoft Certified Fabric Analytics Engineer, building
+                  enterprise reporting on Power BI, Snowflake and Azure.
+                </p>
+                <div class="project-links">
+                  <a href="https://www.linkedin.com/in/ronaldbalza/" target="_blank" class="project-link accent">LinkedIn</a>
+                  <a href="https://github.com/ronaldbalza" target="_blank" class="project-link">GitHub</a>
+                  <a href="../index.html#projects" class="project-link">Portfolio</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-nav">
+              <a href="./" class="btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                All articles
+              </a>
+              <a href="../index.html#contact" class="btn-primary">Get in Touch</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="post-aside" aria-label="Table of contents">
+          <p class="toc-title">On this page</p>
+          <ol class="toc" id="toc"></ol>
+          <div class="aside-tags cat-powerbi">
+            <p class="toc-title">Tags</p>
+            <div class="post-tags"><span>DAX</span><span>Time Intelligence</span><span>Data Modeling</span></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <a href="../index.html" class="logo" aria-label="Back to home">RB</a>
+        <ul class="footer-links">
+          <li><a href="../index.html#about">About</a></li>
+          <li><a href="../index.html#experience">Experience</a></li>
+          <li><a href="../index.html#skills">Skills</a></li>
+          <li><a href="../index.html#certifications">Certifications</a></li>
+          <li><a href="../index.html#projects">Projects</a></li>
+          <li><a href="./">Blog</a></li>
+          <li><a href="../index.html#contact">Contact</a></li>
+        </ul>
+        <p class="footer-copy">© 2024 Ronald Balza</p>
+      </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="../blog.js"></script>
+  </body>
+</html>
